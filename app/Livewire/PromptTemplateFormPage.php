@@ -18,6 +18,7 @@ use App\Actions\PromptTemplates\SavePromptTemplateAction;
 use App\Actions\PromptTemplates\SelectPromptTemplateVoiceGenderAction;
 use App\Livewire\Forms\PromptTemplateForm;
 use App\Models\PromptTemplate;
+use App\Rules\PromptTemplates\PromptTemplateRules;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
@@ -69,7 +70,11 @@ class PromptTemplateFormPage extends Component
      */
     public function save(): void
     {
-        $validated = $this->form->validate();
+        $ruleSet = app(PromptTemplateRules::class);
+        $validated = $this->form->validate(
+            $ruleSet->rules($this->form->selectedVoiceGender),
+            $ruleSet->messages(),
+        );
         $template = app(SavePromptTemplateAction::class)->handle(new SavePromptTemplateRequest(
             $this->editingTemplateId,
             $validated['title'],

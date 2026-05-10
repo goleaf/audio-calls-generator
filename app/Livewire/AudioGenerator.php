@@ -12,8 +12,8 @@ use App\Actions\AudioGenerations\Requests\UsePreviousPromptRequest;
 use App\Actions\AudioGenerations\Requests\UsePromptTemplateRequest;
 use App\Actions\AudioGenerations\UsePreviousPromptAction;
 use App\Actions\AudioGenerations\UsePromptTemplateAction;
+use App\Rules\AudioGenerations\GenerateAudioRules;
 use Illuminate\Contracts\View\View;
-use Illuminate\Validation\Rule;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -83,7 +83,8 @@ class AudioGenerator extends Component
      */
     public function generate(): void
     {
-        $validated = $this->validate($this->templateRules(), $this->validationMessages());
+        $ruleSet = app(GenerateAudioRules::class);
+        $validated = $this->validate($ruleSet->rules(), $ruleSet->messages());
         $this->resetAudioResults(keepGeneration: true);
         $result = app(GenerateAudioAction::class)->handle(new GenerateAudioRequest(
             (int) $validated['selectedPromptTemplateId'],
@@ -193,36 +194,6 @@ class AudioGenerator extends Component
         $this->loadGeneratorData();
         $this->errorMessage = null;
         $this->successMessage = self::SUCCESS_PROMPT_REMOVED;
-    }
-
-    /**
-     * Validation rules for generating audio from a saved prompt template.
-     *
-     * @return array<string, list<mixed>>
-     */
-    private function templateRules(): array
-    {
-        return [
-            'selectedPromptTemplateId' => [
-                'required',
-                'integer',
-                Rule::exists('prompt_templates', 'id'),
-            ],
-        ];
-    }
-
-    /**
-     * Human-readable validation messages shown in the Livewire view.
-     *
-     * @return array<string, string>
-     */
-    private function validationMessages(): array
-    {
-        return [
-            'selectedPromptTemplateId.required' => 'Choose a prompt template first.',
-            'selectedPromptTemplateId.integer' => 'Choose an available prompt template.',
-            'selectedPromptTemplateId.exists' => 'Choose an available prompt template.',
-        ];
     }
 
     /**
