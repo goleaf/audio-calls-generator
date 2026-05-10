@@ -1,10 +1,10 @@
 # Audio Calls Generator
 
-Laravel and Livewire application for generating WAV audio files from text with the Google Gemini API.
+Laravel and Livewire application for creating WAV audio files from reusable prompt templates with Google Gemini TTS.
 
 ## Stack
 
-- PHP `^8.4` (current local runtime: PHP 8.5)
+- PHP `^8.4` (local runtime: PHP 8.5)
 - Laravel 13.8
 - Livewire 4.3
 - Blade
@@ -15,32 +15,179 @@ Laravel and Livewire application for generating WAV audio files from text with t
 - Google Gemini API
 - MySQL or SQLite
 
-## Features
+## Pages
 
-- Single master prompt stored in the database.
-- Text-to-WAV generation through Gemini TTS.
-- Voice gender and voice generator selection.
-- Selected voice preference stored separately from prompt history.
-- Previous prompts and generated audio metadata stored in the database.
-- WAV playback and download on the page.
-- Generated WAV files saved to `storage/app/public/audio`.
-- Shared-hosting document root support without Laravel's `public/` folder.
-- Vite production assets built into root `build/`.
-- Minimal responsive Blade and Tailwind interface.
+| Page | Route | Purpose |
+| --- | --- | --- |
+| Audio generator | `/` | Select a saved prompt template, generate a WAV file, play it, download it, and reuse or remove previous generations. |
+| Prompt templates | `/prompt-templates` | List all saved templates in a table with title, master prompt, prompt text, language, gender, voice, edit, and remove actions. |
+| Create template | `/prompt-templates/create` | Create a reusable prompt template with title, language, voice gender, voice generator, master prompt, and prompt text. |
+| Edit template | `/prompt-templates/{promptTemplate}/edit` | Update an existing prompt template. |
+| WAV file playback | `/storage/audio/{fileName}` | Serves generated WAV files from `storage/app/public/audio` through a Laravel route. |
 
-## Application Flow
+Local Herd URLs are:
 
-The main page is available at `/`.
+```text
+http://audio-calls-generator.test
+http://audio-calls-generator.test/prompt-templates
+```
 
-1. Save the master prompt. This becomes the reusable instruction for future audio ideas.
-2. Choose `Voice gender`. The voice generator list refreshes to show only voices for that gender.
-3. Choose `Voice generator`. The selected gender and generator are saved immediately as the current voice preference.
-4. Enter the text that should become audio.
-5. Generate audio. The app saves the prompt, sends the text and selected voice to Gemini, stores the WAV metadata, and shows the player and download link.
+Production domain:
 
-Changing the voice gender or voice generator does not create a previous prompt. A previous prompt is created only when audio generation starts.
+```text
+https://audio-calls-generator.prus.dev
+```
 
-## Project Layout For Shared Hosting
+## Feature Map
+
+### Prompt Templates
+
+- Full CRUD for reusable prompt templates.
+- Each template stores:
+  - title;
+  - master prompt;
+  - prompt text;
+  - Gemini TTS language code, language name, and readiness;
+  - voice gender;
+  - voice generator name;
+  - voice display label.
+- The index page is a table, and the create/edit form is a separate page.
+- The generator page only uses saved templates, so generation settings come from the selected template.
+- Seed data creates starter templates for support greetings, billing reminders, and delivery updates.
+
+### Audio Generation
+
+- The main page requires a selected prompt template.
+- Selecting a template loads its master prompt, prompt text, language, gender, and voice settings.
+- Clicking `Generate audio` creates or updates a database draft, calls Gemini TTS, stores the WAV file, and marks the generation as generated or failed.
+- The page shows:
+  - selected template summary;
+  - loading button state and `Creating WAV...` state;
+  - success and error messages;
+  - WAV player;
+  - WAV download link;
+  - previous prompt history.
+- MP3 generation is intentionally removed. The app is WAV-only.
+
+### Previous Prompts
+
+- Previous prompts are created only when audio generation starts.
+- Changing template fields does not create previous prompt history.
+- Previous prompts can be reused in the generator.
+- Previous prompts can be removed from the list.
+- Removing a previous prompt also deletes the stored WAV file when one exists.
+- Failed generations are stored with their error message so the user can see what happened.
+
+### Gemini TTS
+
+- Default model: `gemini-3.1-flash-tts-preview`.
+- API credentials are read from `.env` through `config/services.php`.
+- API logic lives in `App\Services\GeminiAudioService`.
+- Gemini returns base64 PCM audio. The service wraps the PCM bytes in a WAV container and stores the final `.wav` file.
+- Transport and API failures are converted into user-facing generation errors.
+- Safe failure details are logged without exposing the API key.
+
+### Voices
+
+Voice selection is stored per prompt template.
+
+Female voices:
+
+```text
+Achernar, Aoede, Autonoe, Callirrhoe, Despina, Erinome, Gacrux, Kore, Laomedeia, Leda, Pulcherrima, Sulafat, Vindemiatrix, Zephyr
+```
+
+Male voices:
+
+```text
+Achird, Algenib, Algieba, Alnilam, Charon, Enceladus, Fenrir, Iapetus, Orus, Puck, Rasalgethi, Sadachbia, Sadaltager, Schedar, Umbriel, Zubenelgenubi
+```
+
+The template form first selects gender, then refreshes the voice generator list for that gender.
+
+### Languages
+
+Prompt templates store the selected Gemini TTS language. The form groups supported languages by readiness:
+
+- GA languages, such as English (United States), French (France), German (Germany), Spanish (Spain), and other stable options.
+- Preview languages, such as Lithuanian, English (United Kingdom), Spanish (Mexico), Swedish, Urdu, and other preview options.
+
+Language data lives in `App\Services\GeminiLanguageService`.
+
+### Audio Storage
+
+Generated WAV files are saved through Laravel Storage:
+
+```php
+Storage::disk('public')
+```
+
+Default storage path:
+
+```text
+storage/app/public/audio
+```
+
+Public route shape:
+
+```text
+/storage/audio/example.wav
+```
+
+The browser receives files through the named route `audio.files.show`, handled by `App\Livewire\AudioFile`.
+
+## Database
+
+Runtime data is stored in these application tables:
+
+| Table | Purpose |
+| --- | --- |
+| `prompt_templates` | Reusable prompt templates with language and voice settings. |
+| `audio_generations` | Prompt history, generation status, selected TTS metadata, WAV metadata, and errors. |
+| `audio_voice_preferences` | Legacy current voice preference storage from the earlier generator flow. The current generator uses template-level voice settings. |
+| `master_prompts` | Legacy single master prompt storage from the earlier generator flow. Master prompts now live on prompt templates. |
+
+Laravel system tables include `users`, `sessions`, `cache`, `jobs`, `failed_jobs`, and `job_batches`.
+
+## Architecture
+
+The app keeps Livewire components thin and moves work into grouped actions and services.
+
+Important files:
+
+```text
+app/Livewire/AudioGenerator.php
+app/Livewire/AudioFile.php
+app/Livewire/PromptTemplateIndex.php
+app/Livewire/PromptTemplateFormPage.php
+app/Livewire/Forms/PromptTemplateForm.php
+app/Actions/AudioGenerations/
+app/Actions/PromptTemplates/
+app/Rules/AudioGenerations/
+app/Rules/PromptTemplates/
+app/Services/GeminiAudioService.php
+app/Services/GeminiLanguageService.php
+app/Services/GeminiVoiceService.php
+app/Services/AudioGenerationHistoryService.php
+app/Services/PromptTemplateService.php
+resources/views/livewire/audio-generator.blade.php
+resources/views/livewire/prompt-template-index.blade.php
+resources/views/livewire/prompt-template-form-page.blade.php
+resources/scss/app.scss
+```
+
+Quality gates are covered by tests for:
+
+- prompt template pages;
+- audio generation persistence;
+- Gemini audio payload handling;
+- voice and language metadata;
+- storage file route access;
+- shared-hosting public path;
+- no Livewire Volt usage;
+- dependency injection instead of service-locator helpers in app source.
+
+## Shared Hosting Layout
 
 This project is organized for shared hosting where the subdomain document root is the project root `/`.
 
@@ -58,10 +205,12 @@ The Laravel `public/` folder is intentionally not used. The application sets Lar
 
 The root `.htaccess` file:
 
-- redirects to `https://audio-calls-generator.prus.dev`;
+- redirects production traffic to `https://audio-calls-generator.prus.dev`;
 - blocks direct access to Laravel internals such as `app`, `bootstrap`, `config`, `database`, `resources`, `routes`, `tests`, and `vendor`;
 - serves `/storage/...` URLs from `storage/app/public/...`;
 - sends all application requests to root `index.php`.
+
+No `public/storage` symlink is required for the default shared-hosting layout.
 
 ## Installation
 
@@ -71,6 +220,7 @@ npm install
 cp .env.example .env
 php artisan key:generate
 php artisan migrate
+php artisan db:seed --class=PromptTemplateSeeder --no-interaction
 npm run build
 ```
 
@@ -80,11 +230,7 @@ For local frontend development:
 npm run dev
 ```
 
-Laravel Herd serves this project locally at:
-
-```text
-https://audio-calls-generator.test
-```
+Laravel Herd serves the project locally; no `php artisan serve` command is needed for normal Herd usage.
 
 ## Environment
 
@@ -120,6 +266,7 @@ GEMINI_API_KEY=
 GEMINI_API_BASE_URL=https://generativelanguage.googleapis.com/v1beta
 GEMINI_TTS_MODEL=gemini-3.1-flash-tts-preview
 GEMINI_TTS_VOICE=Kore
+GEMINI_TTS_LANGUAGE=en-US
 GEMINI_API_TIMEOUT=60
 GEMINI_API_CONNECT_TIMEOUT=10
 GEMINI_API_RETRIES=2
@@ -131,47 +278,16 @@ GEMINI_TTS_SAMPLE_WIDTH=2
 
 Never commit a real Gemini API key.
 
-## Audio Storage
-
-Generated WAV files are saved through:
-
-```php
-Storage::disk('public')
-```
-
-Default path:
-
-```text
-storage/app/public/audio
-```
-
-Public URL shape:
-
-```text
-https://audio-calls-generator.prus.dev/storage/audio/example.wav
-```
-
-No `public/storage` symlink is required for the default shared-hosting layout. The root `.htaccess` maps `/storage/...` requests to `storage/app/public/...`.
-
-## Database Storage
-
-The app stores runtime state in database tables:
-
-- `master_prompts` stores the single reusable master prompt.
-- `audio_voice_preferences` stores the current voice gender, generator name, and label.
-- `audio_generations` stores prompt text, selected voice metadata, generation status, WAV metadata, and errors.
-
-Changing `Voice gender` or `Voice generator` updates only `audio_voice_preferences`. It does not create a `Previous prompts` item.
-
 ## Deployment
 
-Recommended build and deployment commands:
+Recommended production commands:
 
 ```bash
 composer install --no-dev --optimize-autoloader
 npm ci
 npm run build
 php artisan migrate --force
+php artisan db:seed --class=PromptTemplateSeeder --force --no-interaction
 php artisan config:cache
 php artisan route:cache
 php artisan view:cache
@@ -209,9 +325,9 @@ The frontend is built from SCSS and Tailwind through Vite.
 
 The build includes:
 
-- Vite legacy chunks and polyfills.
-- PostCSS preset-env transforms.
-- Autoprefixer.
+- Vite legacy chunks and polyfills;
+- PostCSS preset-env transforms;
+- Autoprefixer;
 - Browser targets for Chrome, Edge, Firefox, Safari, iOS Safari, Android Browser, and Samsung Internet.
 
 Tailwind CSS 4 is modern-browser-first, so Internet Explorer is not supported.
@@ -223,6 +339,8 @@ php artisan test --compact
 vendor/bin/pint --dirty --format agent
 npm run build
 composer validate --strict --no-interaction
+php artisan route:list --except-vendor --no-interaction
+php artisan db:seed --class=PromptTemplateSeeder --no-interaction
 ```
 
 ## Verification
@@ -235,20 +353,3 @@ npm run build
 ```
 
 The shared-hosting tests verify that Laravel uses the project root as the public path, the legacy `public/` folder is not required, and Vite builds assets into root `build/`.
-
-## Main Files
-
-- `index.php`
-- `.htaccess`
-- `bootstrap/app.php`
-- `app/Livewire/AudioGenerator.php`
-- `app/Services/GeminiAudioService.php`
-- `app/Services/GeminiVoiceService.php`
-- `app/Services/AudioGenerationHistoryService.php`
-- `app/Services/AudioVoicePreferenceService.php`
-- `app/Services/MasterPromptService.php`
-- `resources/views/livewire/audio-generator.blade.php`
-- `resources/scss/app.scss`
-- `config/services.php`
-- `config/filesystems.php`
-- `database/migrations/`
