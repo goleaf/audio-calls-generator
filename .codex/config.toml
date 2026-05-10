@@ -1,0 +1,14 @@
+[mcp_servers.laravel-boost]
+command = "php"
+args = ["artisan", "boost:mcp"]
+cwd = "/Users/andrejprus/Herd/audio-calls-generator"
+
+[features]
+codex_hooks = true
+
+[hooks]
+Stop = [
+  { hooks = [
+    { type = "command", command = "bash .codex/hooks/auto-commit-push.sh" },
+  ] },
+]
