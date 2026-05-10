@@ -90,7 +90,7 @@ class GeminiAudioService
             ->map(fn (string $path): array => [
                 'path' => $path,
                 'name' => basename($path),
-                'url' => $disk->url($path),
+                'url' => $this->publicAudioUrl($path),
                 'size' => $disk->size($path),
                 'last_modified' => $disk->lastModified($path),
             ])
@@ -205,12 +205,20 @@ class GeminiAudioService
 
         return [
             'path' => $path,
-            'url' => $disk->url($path),
+            'url' => $this->publicAudioUrl($path),
             'name' => basename($path),
             'disk' => self::PUBLIC_DISK,
             'mime_type' => self::WAV_MIME_TYPE,
             'size' => strlen($wav),
         ];
+    }
+
+    /**
+     * Build a same-origin playback URL for the generated WAV route.
+     */
+    private function publicAudioUrl(string $path): string
+    {
+        return route('audio.files.show', ['fileName' => basename($path)], false);
     }
 
     /**

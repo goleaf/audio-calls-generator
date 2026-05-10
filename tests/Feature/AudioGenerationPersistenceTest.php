@@ -145,6 +145,35 @@ test('it saves direct audio generation information to the database', function ()
     ]);
 });
 
+test('it normalizes generated audio urls before saving them for playback', function () {
+    $this->mock(GeminiAudioService::class)
+        ->shouldReceive('generateWav')
+        ->once()
+        ->with('Direct text', 'Kore')
+        ->andReturn([
+            'path' => 'audio/direct.wav',
+            'url' => 'http://audio-calls-generator.test/storage/audio/direct.wav',
+            'name' => 'direct.wav',
+            'disk' => 'public',
+            'mime_type' => 'audio/wav',
+            'size' => 256,
+            'voice' => 'Kore',
+            'voice_gender' => 'Female',
+            'voice_label' => 'Female - Kore',
+        ]);
+
+    Livewire::test(AudioGenerator::class)
+        ->set('text', 'Direct text')
+        ->call('generate')
+        ->assertSet('wavUrl', '/storage/audio/direct.wav')
+        ->assertSet('savedGenerations.0.audio_url', '/storage/audio/direct.wav');
+
+    $this->assertDatabaseHas('audio_generations', [
+        'audio_path' => 'audio/direct.wav',
+        'audio_url' => '/storage/audio/direct.wav',
+    ]);
+});
+
 test('it loads a previous prompt into the form', function () {
     $generation = AudioGeneration::factory()->create([
         'master_prompt' => 'Use a calm radio host style.',

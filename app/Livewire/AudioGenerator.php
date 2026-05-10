@@ -103,7 +103,10 @@ class AudioGenerator extends Component
             $audio = app(GeminiAudioService::class)->generateWav($validated['text'], $validated['selectedVoice']);
             $generation = $history->markWavGenerated($generation, $audio);
 
-            $this->applyWavResult($audio);
+            $this->applyWavResult([
+                'path' => (string) $generation->audio_path,
+                'url' => (string) $generation->audio_url,
+            ]);
             $this->syncGenerationState($history, $generation);
             $this->successMessage = self::SUCCESS_WAV_GENERATED;
         } catch (AudioGenerationException $exception) {

@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\AudioGeneration;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class AudioGenerationHistoryService
 {
@@ -111,10 +112,16 @@ class AudioGenerationHistoryService
      */
     public function find(int $id): ?AudioGeneration
     {
-        return AudioGeneration::query()
+        $generation = AudioGeneration::query()
             ->recentHistory()
             ->whereKey($id)
             ->first();
+
+        if ($generation === null) {
+            return null;
+        }
+
+        return $this->withNormalizedAudioUrl($generation);
     }
 
     /**
@@ -156,7 +163,7 @@ class AudioGenerationHistoryService
                 'tts_voice_label' => $generation->tts_voice_label,
                 'audio_disk' => $generation->audio_disk,
                 'audio_path' => $generation->audio_path,
-                'audio_url' => $generation->audio_url,
+                'audio_url' => $this->publicAudioUrl($generation->audio_path, $generation->audio_url),
                 'audio_file_name' => $generation->audio_file_name,
                 'audio_mime_type' => $generation->audio_mime_type,
                 'audio_size_bytes' => $generation->audio_size_bytes,
@@ -206,7 +213,7 @@ class AudioGenerationHistoryService
             'tts_voice_label' => $audio['voice_label'] ?? $voice['label'],
             'audio_disk' => $audio['disk'] ?? self::PUBLIC_DISK,
             'audio_path' => $audio['path'],
-            'audio_url' => $audio['url'],
+            'audio_url' => $this->publicAudioUrl($audio['path'], $audio['url'] ?? null),
             'audio_file_name' => $audio['name'] ?? basename($audio['path']),
             'audio_mime_type' => $audio['mime_type'] ?? self::WAV_MIME_TYPE,
             'audio_size_bytes' => $audio['size'] ?? null,
@@ -225,6 +232,34 @@ class AudioGenerationHistoryService
         }
 
         Storage::disk($generation->audio_disk ?: self::PUBLIC_DISK)->delete($generation->audio_path);
+    }
+
+    /**
+     * Apply the same-origin playback URL to a loaded generation without saving it.
+     */
+    private function withNormalizedAudioUrl(AudioGeneration $generation): AudioGeneration
+    {
+        $generation->audio_url = $this->publicAudioUrl($generation->audio_path, $generation->audio_url);
+
+        return $generation;
+    }
+
+    /**
+     * Build a browser-safe same-origin URL for generated WAV playback.
+     */
+    private function publicAudioUrl(?string $path, ?string $fallback = null): ?string
+    {
+        if ($path === null || $path === '') {
+            return $fallback;
+        }
+
+        $fileName = basename($path);
+
+        if (! Str::endsWith(Str::lower($fileName), '.wav')) {
+            return $fallback;
+        }
+
+        return route('audio.files.show', ['fileName' => $fileName], false);
     }
 
     /**

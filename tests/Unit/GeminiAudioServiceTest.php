@@ -49,7 +49,7 @@ test('it stores Gemini PCM output as a public wav file', function () {
 
     expect(str_starts_with($audio['path'], 'audio/'))->toBeTrue();
     expect(str_ends_with($audio['path'], '.wav'))->toBeTrue();
-    expect($audio['url'])->toContain('/storage/audio/');
+    expect($audio['url'])->toStartWith('/storage/audio/');
     expect($audio['voice'])->toBe('Kore');
     expect($audio['voice_gender'])->toBe('Female');
     expect($audio['voice_label'])->toBe('Female - Kore');
@@ -101,6 +101,34 @@ test('it sends the selected voice generator to Gemini', function () {
         ->and($audio['voice_label'])->toBe('Male - Puck');
 
     Http::assertSent(fn (Request $request): bool => data_get($request->data(), 'generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName') === 'Puck');
+});
+
+test('it stores relative audio urls when the public disk has an absolute host', function () {
+    config()->set('filesystems.disks.public.url', 'http://audio-calls-generator.test/storage');
+
+    Http::fake([
+        'generativelanguage.googleapis.com/*' => Http::response([
+            'candidates' => [
+                [
+                    'content' => [
+                        'parts' => [
+                            [
+                                'inlineData' => [
+                                    'mimeType' => 'audio/pcm',
+                                    'data' => base64_encode(str_repeat("\x00\x01", 480)),
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ]),
+    ]);
+
+    $audio = app(GeminiAudioService::class)->generateWav('Read this text.');
+
+    expect($audio['url'])->toStartWith('/storage/audio/')
+        ->and($audio['url'])->not->toStartWith('http://');
 });
 
 test('it returns saved wav files from public storage', function () {
