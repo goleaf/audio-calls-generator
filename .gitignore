@@ -16,11 +16,10 @@
 /.vscode
 /.zed
 /auth.json
+/build
+/hot
 /node_modules
-/public/build
-/public/fonts-manifest.dev.json
-/public/hot
-/public/storage
+/public/
 /storage/*.key
 /storage/pail
 /vendor

@@ -14,22 +14,15 @@
     RewriteRule ^ https://audio-calls-generator.prus.dev%{REQUEST_URI} [L,R=301]
 
     # Keep private Laravel application directories out of the document root.
-    RewriteRule ^(?:app|bootstrap|config|database|node_modules|resources|routes|tests|vendor)(?:/|$) - [F,L]
+    RewriteRule ^(?:app|bootstrap|config|database|node_modules|public|resources|routes|tests|vendor)(?:/|$) - [F,L]
     RewriteRule ^(?:artisan|composer\.(?:json|lock)|package(?:-lock)?\.json|phpunit\.xml|vite\.config\.js|postcss\.config\.cjs|AGENTS\.md|CLAUDE\.md|GEMINI\.md|README\.md|opencode\.json|boost\.json)$ - [F,L]
     RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L]
 
-    # Serve generated Vite assets and static files without exposing /public in URLs.
-    RewriteRule ^build/(.*)$ public/build/$1 [L]
-    RewriteRule ^favicon\.ico$ public/favicon.ico [L]
-    RewriteRule ^robots\.txt$ public/robots.txt [L]
-
     # Serve public storage files from storage/app/public without exposing private storage.
-    RewriteCond %{REQUEST_URI} !^/storage/app/public/
+    RewriteCond %{THE_REQUEST} \s/+storage/app/public/ [NC]
+    RewriteRule ^storage/app/public/ - [F,L]
     RewriteRule ^storage/(.*)$ storage/app/public/$1 [L]
-    RewriteRule ^storage/(?!app/public/).* - [F,L]
-
-    # Block direct execution of the legacy Laravel public front controller.
-    RewriteRule ^public/(?:index\.php|\.htaccess)$ - [F,L]
+    RewriteRule ^storage/ - [F,L]
 
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
