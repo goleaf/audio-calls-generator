@@ -1,6 +1,6 @@
 <?php
 
-use App\Http\Controllers\AudioFileController;
+use App\Livewire\AudioFile;
 use App\Livewire\AudioGenerator;
 use App\Livewire\PromptTemplateFormPage;
 use App\Livewire\PromptTemplateIndex;
@@ -10,7 +10,7 @@ Route::middleware('web')
     ->prefix('')
     ->name('audio.')
     ->group(function (): void {
-        Route::get('/storage/audio/{fileName}', AudioFileController::class)
+        Route::get('/storage/audio/{fileName}', AudioFile::class)
             ->where('fileName', '[A-Za-z0-9._-]+')
             ->name('files.show');
 

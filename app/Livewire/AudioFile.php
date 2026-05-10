@@ -1,12 +1,12 @@
 <?php
 
-namespace App\Http\Controllers;
+namespace App\Livewire;
 
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
-class AudioFileController extends Controller
+class AudioFile
 {
     /**
      * Serve generated WAV files from the public storage disk for browser playback.

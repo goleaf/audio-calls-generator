@@ -1,6 +1,8 @@
 <?php
 
+use App\Livewire\AudioFile;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
 
@@ -16,6 +18,13 @@ test('generated wav files can be played from the storage url', function () {
         ->assertHeader('content-disposition', 'inline; filename="demo.wav"');
 
     expect($response->baseResponse)->toBeInstanceOf(BinaryFileResponse::class);
+});
+
+test('audio file route is owned by livewire instead of a controller', function () {
+    $legacyController = app_path('Http/Controllers/'.'AudioFile'.'Controller.php');
+
+    expect(file_exists($legacyController))->toBeFalse();
+    expect(Route::getRoutes()->getByName('audio.files.show')?->getActionName())->toBe(AudioFile::class);
 });
 
 test('non wav audio storage paths are not served', function () {
