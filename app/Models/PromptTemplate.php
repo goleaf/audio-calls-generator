@@ -11,6 +11,9 @@ use Illuminate\Database\Eloquent\Model;
 #[Fillable([
     'title',
     'prompt_text',
+    'language_code',
+    'language_name',
+    'language_readiness',
 ])]
 class PromptTemplate extends Model
 {
@@ -29,6 +32,9 @@ class PromptTemplate extends Model
                 'id',
                 'title',
                 'prompt_text',
+                'language_code',
+                'language_name',
+                'language_readiness',
                 'created_at',
                 'updated_at',
             ])

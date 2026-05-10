@@ -24,6 +24,31 @@
                     </div>
 
                     <div class="space-y-2">
+                        <label for="selectedLanguageCode" class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
+                            <x-icon name="languages" class="size-4 text-slate-500" />
+                            <span>Language</span>
+                        </label>
+
+                        <select
+                            id="selectedLanguageCode"
+                            wire:model="selectedLanguageCode"
+                            class="min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
+                        >
+                            @foreach ($languageGroups as $readiness => $languages)
+                                <optgroup label="{{ $readiness }}">
+                                    @foreach ($languages as $language)
+                                        <option value="{{ $language['code'] }}">{{ $language['label'] }}</option>
+                                    @endforeach
+                                </optgroup>
+                            @endforeach
+                        </select>
+
+                        @error('selectedLanguageCode')
+                            <p class="text-sm text-red-600" wire:transition>{{ $message }}</p>
+                        @enderror
+                    </div>
+
+                    <div class="space-y-2">
                         <div class="audio-generator__label-row">
                             <label for="promptText" class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
                                 <x-icon name="file-text" class="size-4 text-slate-500" />
@@ -108,6 +133,10 @@
                                 </div>
 
                                 <p class="line-clamp-4 break-words text-xs leading-5 text-slate-500">{{ $template['prompt_text'] }}</p>
+
+                                @if ($template['language_label'])
+                                    <p class="truncate text-xs text-slate-500">{{ $template['language_label'] }}</p>
+                                @endif
                             </div>
                         @endforeach
                     </div>

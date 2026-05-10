@@ -27,28 +27,29 @@ class AudioGenerationHistoryService
      */
     public function __construct(
         private readonly GeminiVoiceService $voices,
+        private readonly GeminiLanguageService $languages,
     ) {}
 
     /**
      * Create a draft record before the Gemini request has produced audio.
      */
-    public function createDraft(?string $masterPrompt, ?string $text, string $voiceName): AudioGeneration
+    public function createDraft(?string $masterPrompt, ?string $text, string $voiceName, string $languageCode): AudioGeneration
     {
-        return AudioGeneration::query()->create($this->draftAttributes($masterPrompt, $text, $voiceName));
+        return AudioGeneration::query()->create($this->draftAttributes($masterPrompt, $text, $voiceName, $languageCode));
     }
 
     /**
      * Update the active draft or create a new one when the current record is no longer editable.
      */
-    public function saveDraft(?int $id, ?string $masterPrompt, ?string $text, string $voiceName): AudioGeneration
+    public function saveDraft(?int $id, ?string $masterPrompt, ?string $text, string $voiceName, string $languageCode): AudioGeneration
     {
         $generation = $id === null ? null : $this->find($id);
 
         if ($generation === null || $generation->status !== AudioGeneration::STATUS_DRAFT) {
-            return $this->createDraft($masterPrompt, $text, $voiceName);
+            return $this->createDraft($masterPrompt, $text, $voiceName, $languageCode);
         }
 
-        $generation->fill($this->draftAttributes($masterPrompt, $text, $voiceName));
+        $generation->fill($this->draftAttributes($masterPrompt, $text, $voiceName, $languageCode));
         $generation->save();
 
         return $generation->refresh();
@@ -57,12 +58,13 @@ class AudioGenerationHistoryService
     /**
      * Create and immediately mark a generation as WAV-generated.
      *
-     * @param  array{path: string, url: string, name?: string, disk?: string, mime_type?: string, size?: int, voice?: string, voice_gender?: string, voice_label?: string}  $audio
+     * @param  array{path: string, url: string, name?: string, disk?: string, mime_type?: string, size?: int, voice?: string, voice_gender?: string, voice_label?: string, language_code?: string, language_name?: string, language_readiness?: string, language_label?: string}  $audio
      */
     public function createWavGenerated(?string $masterPrompt, string $text, array $audio): AudioGeneration
     {
         $voice = $this->voices->find($audio['voice'] ?? '') ?? $this->voices->default();
-        $generation = $this->createDraft($masterPrompt, $text, $voice['name']);
+        $language = $this->languages->find($audio['language_code'] ?? '') ?? $this->languages->default();
+        $generation = $this->createDraft($masterPrompt, $text, $voice['name'], $language['code']);
 
         return $this->markWavGenerated($generation, $audio);
     }
@@ -70,7 +72,7 @@ class AudioGenerationHistoryService
     /**
      * Persist WAV metadata onto an existing draft generation.
      *
-     * @param  array{path: string, url: string, name?: string, disk?: string, mime_type?: string, size?: int, voice?: string, voice_gender?: string, voice_label?: string}  $audio
+     * @param  array{path: string, url: string, name?: string, disk?: string, mime_type?: string, size?: int, voice?: string, voice_gender?: string, voice_label?: string, language_code?: string, language_name?: string, language_readiness?: string, language_label?: string}  $audio
      */
     public function markWavGenerated(AudioGeneration $generation, array $audio): AudioGeneration
     {
@@ -83,22 +85,23 @@ class AudioGenerationHistoryService
     /**
      * Create a failed generation record for callers that do not already have a draft.
      */
-    public function recordWavFailure(?string $masterPrompt, string $text, string $voiceName, string $errorMessage): AudioGeneration
+    public function recordWavFailure(?string $masterPrompt, string $text, string $voiceName, string $languageCode, string $errorMessage): AudioGeneration
     {
-        $generation = $this->createDraft($masterPrompt, $text, $voiceName);
+        $generation = $this->createDraft($masterPrompt, $text, $voiceName, $languageCode);
 
-        return $this->markWavFailed($generation, $voiceName, $errorMessage);
+        return $this->markWavFailed($generation, $voiceName, $languageCode, $errorMessage);
     }
 
     /**
      * Persist failure metadata onto an existing generation.
      */
-    public function markWavFailed(AudioGeneration $generation, string $voiceName, string $errorMessage): AudioGeneration
+    public function markWavFailed(AudioGeneration $generation, string $voiceName, string $languageCode, string $errorMessage): AudioGeneration
     {
         $generation->fill([
             'status' => AudioGeneration::STATUS_FAILED,
             'tts_model' => $this->modelName(),
             ...$this->voiceAttributes($voiceName),
+            ...$this->languageAttributes($languageCode),
             ...$this->audioConfigAttributes(),
             'error_message' => $errorMessage,
         ]);
@@ -161,6 +164,10 @@ class AudioGenerationHistoryService
                 'tts_voice' => $generation->tts_voice,
                 'tts_voice_gender' => $generation->tts_voice_gender,
                 'tts_voice_label' => $generation->tts_voice_label,
+                'tts_language_code' => $generation->tts_language_code,
+                'tts_language_name' => $generation->tts_language_name,
+                'tts_language_readiness' => $generation->tts_language_readiness,
+                'tts_language_label' => $this->languageLabel($generation->tts_language_code, $generation->tts_language_name),
                 'audio_disk' => $generation->audio_disk,
                 'audio_path' => $generation->audio_path,
                 'audio_url' => $this->publicAudioUrl($generation->audio_path, $generation->audio_url),
@@ -181,7 +188,7 @@ class AudioGenerationHistoryService
      *
      * @return array<string, mixed>
      */
-    private function draftAttributes(?string $masterPrompt, ?string $text, string $voiceName): array
+    private function draftAttributes(?string $masterPrompt, ?string $text, string $voiceName, string $languageCode): array
     {
         return [
             'prompt_brief' => $masterPrompt,
@@ -190,6 +197,7 @@ class AudioGenerationHistoryService
             'status' => AudioGeneration::STATUS_DRAFT,
             'tts_model' => $this->modelName(),
             ...$this->voiceAttributes($voiceName),
+            ...$this->languageAttributes($languageCode),
             ...$this->audioConfigAttributes(),
             'error_message' => null,
         ];
@@ -198,12 +206,13 @@ class AudioGenerationHistoryService
     /**
      * Build the database attributes for a successful WAV result.
      *
-     * @param  array{path: string, url: string, name?: string, disk?: string, mime_type?: string, size?: int, voice?: string, voice_gender?: string, voice_label?: string}  $audio
+     * @param  array{path: string, url: string, name?: string, disk?: string, mime_type?: string, size?: int, voice?: string, voice_gender?: string, voice_label?: string, language_code?: string, language_name?: string, language_readiness?: string, language_label?: string}  $audio
      * @return array<string, mixed>
      */
     private function wavAttributes(array $audio): array
     {
         $voice = $this->voices->find($audio['voice'] ?? '') ?? $this->voices->default();
+        $language = $this->languages->find($audio['language_code'] ?? '') ?? $this->languages->default();
 
         return [
             'status' => AudioGeneration::STATUS_WAV_GENERATED,
@@ -211,6 +220,9 @@ class AudioGenerationHistoryService
             'tts_voice' => $voice['name'],
             'tts_voice_gender' => $audio['voice_gender'] ?? $voice['gender'],
             'tts_voice_label' => $audio['voice_label'] ?? $voice['label'],
+            'tts_language_code' => $language['code'],
+            'tts_language_name' => $audio['language_name'] ?? $language['name'],
+            'tts_language_readiness' => $audio['language_readiness'] ?? $language['readiness'],
             'audio_disk' => $audio['disk'] ?? self::PUBLIC_DISK,
             'audio_path' => $audio['path'],
             'audio_url' => $this->publicAudioUrl($audio['path'], $audio['url'] ?? null),
@@ -276,6 +288,34 @@ class AudioGenerationHistoryService
             'tts_voice_gender' => $voice['gender'],
             'tts_voice_label' => $voice['label'],
         ];
+    }
+
+    /**
+     * Build normalized language attributes from a Gemini-TTS BCP-47 code.
+     *
+     * @return array{tts_language_code: string, tts_language_name: string, tts_language_readiness: string}
+     */
+    private function languageAttributes(string $languageCode): array
+    {
+        $language = $this->languages->find($languageCode) ?? $this->languages->default();
+
+        return [
+            'tts_language_code' => $language['code'],
+            'tts_language_name' => $language['name'],
+            'tts_language_readiness' => $language['readiness'],
+        ];
+    }
+
+    /**
+     * Build a nullable language label for the history list.
+     */
+    private function languageLabel(?string $code, ?string $name): ?string
+    {
+        if ($code === null || $code === '' || $name === null || $name === '') {
+            return null;
+        }
+
+        return "{$name} - {$code}";
     }
 
     /**

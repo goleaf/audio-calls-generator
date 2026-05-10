@@ -20,6 +20,9 @@ test('audio generator page renders', function () {
         ->assertSee('Audio generator')
         ->assertSee('Master prompt')
         ->assertSee('Prompt template')
+        ->assertSee('Language')
+        ->assertSee('English (United States) - en-US')
+        ->assertSee('Lithuanian (Lithuania) - lt-LT')
         ->assertSee('Voice gender')
         ->assertSee('Voice generator')
         ->assertSee('Female')
@@ -52,6 +55,9 @@ test('audio generator can load a saved prompt template into the text field', fun
     $template = PromptTemplate::factory()->create([
         'title' => 'Follow up call',
         'prompt_text' => 'Ask the caller if they need more help with their order.',
+        'language_code' => 'lt-LT',
+        'language_name' => 'Lithuanian (Lithuania)',
+        'language_readiness' => 'Preview',
     ]);
 
     Livewire::test(AudioGenerator::class)
@@ -59,6 +65,7 @@ test('audio generator can load a saved prompt template into the text field', fun
         ->assertSee('Follow up call')
         ->call('usePromptTemplate', $template->id)
         ->assertSet('selectedPromptTemplateId', (string) $template->id)
+        ->assertSet('selectedLanguageCode', 'lt-LT')
         ->assertSet('text', 'Ask the caller if they need more help with their order.')
         ->assertSet('successMessage', 'Prompt template has been loaded.');
 });
@@ -68,14 +75,14 @@ test('voice generator names are filtered by selected gender', function () {
         ->assertSet('selectedVoiceGender', 'Female')
         ->assertSet('selectedVoice', 'Kore')
         ->assertSet('voiceGenerators.0.name', 'Kore')
-        ->assertSee('Kore')
-        ->assertDontSee('Puck')
+        ->assertSeeHtml('<option value="Kore">Kore</option>')
+        ->assertDontSeeHtml('<option value="Puck">Puck</option>')
         ->call('selectVoiceGender', 'Male')
         ->assertSet('selectedVoiceGender', 'Male')
         ->assertSet('selectedVoice', 'Puck')
         ->assertSet('voiceGenerators.0.name', 'Puck')
-        ->assertSee('Puck')
-        ->assertDontSee('Kore');
+        ->assertSeeHtml('<option value="Puck">Puck</option>')
+        ->assertDontSeeHtml('<option value="Kore">Kore</option>');
 });
 
 test('it saves the selected voice preference without creating a previous prompt', function () {
@@ -144,7 +151,7 @@ test('it updates the saved voice draft when generating audio', function () {
     $this->mock(GeminiAudioService::class)
         ->shouldReceive('generateWav')
         ->once()
-        ->with('Narration script', 'Puck')
+        ->with('Narration script', 'Puck', 'en-US')
         ->andReturn([
             'path' => 'audio/demo.wav',
             'url' => '/storage/audio/demo.wav',
@@ -155,6 +162,10 @@ test('it updates the saved voice draft when generating audio', function () {
             'voice' => 'Puck',
             'voice_gender' => 'Male',
             'voice_label' => 'Male - Puck',
+            'language_code' => 'en-US',
+            'language_name' => 'English (United States)',
+            'language_readiness' => 'GA',
+            'language_label' => 'English (United States) - en-US',
         ]);
 
     Livewire::test(AudioGenerator::class)
@@ -173,6 +184,9 @@ test('it updates the saved voice draft when generating audio', function () {
         'tts_voice' => 'Puck',
         'tts_voice_gender' => 'Male',
         'tts_voice_label' => 'Male - Puck',
+        'tts_language_code' => 'en-US',
+        'tts_language_name' => 'English (United States)',
+        'tts_language_readiness' => 'GA',
     ]);
 });
 
@@ -184,6 +198,15 @@ test('selected voice generator must match selected gender before generating audi
         ->call('generate')
         ->assertHasErrors(['selectedVoice' => ['in']])
         ->assertSee('Choose a generator from the selected gender.');
+});
+
+test('selected language must exist before generating audio', function () {
+    Livewire::test(AudioGenerator::class)
+        ->set('text', 'Narration script')
+        ->set('selectedLanguageCode', 'missing')
+        ->call('generate')
+        ->assertHasErrors(['selectedLanguageCode' => ['in']])
+        ->assertSee('Choose an available language.');
 });
 
 test('audio generator page shows saved database generations', function () {
@@ -292,7 +315,7 @@ test('it generates only a wav file through the Gemini service', function () {
     $this->mock(GeminiAudioService::class)
         ->shouldReceive('generateWav')
         ->once()
-        ->with('Narration script', 'Puck')
+        ->with('Narration script', 'Puck', 'lt-LT')
         ->andReturn([
             'path' => 'audio/demo.wav',
             'url' => '/storage/audio/demo.wav',
@@ -303,10 +326,15 @@ test('it generates only a wav file through the Gemini service', function () {
             'voice' => 'Puck',
             'voice_gender' => 'Male',
             'voice_label' => 'Male - Puck',
+            'language_code' => 'lt-LT',
+            'language_name' => 'Lithuanian (Lithuania)',
+            'language_readiness' => 'Preview',
+            'language_label' => 'Lithuanian (Lithuania) - lt-LT',
         ]);
 
     Livewire::test(AudioGenerator::class)
         ->set('text', 'Narration script')
+        ->set('selectedLanguageCode', 'lt-LT')
         ->call('selectVoiceGender', 'Male')
         ->set('selectedVoice', 'Puck')
         ->call('generate')
@@ -327,6 +355,9 @@ test('it generates only a wav file through the Gemini service', function () {
         'tts_voice' => 'Puck',
         'tts_voice_gender' => 'Male',
         'tts_voice_label' => 'Male - Puck',
+        'tts_language_code' => 'lt-LT',
+        'tts_language_name' => 'Lithuanian (Lithuania)',
+        'tts_language_readiness' => 'Preview',
     ]);
 });
 
@@ -334,7 +365,7 @@ test('it shows generation errors to the user', function () {
     $this->mock(GeminiAudioService::class)
         ->shouldReceive('generateWav')
         ->once()
-        ->with('Narration script', 'Kore')
+        ->with('Narration script', 'Kore', 'en-US')
         ->andThrow(new AudioGenerationException('Gemini API key is not configured.'));
 
     Livewire::test(AudioGenerator::class)

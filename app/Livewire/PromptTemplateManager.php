@@ -2,8 +2,10 @@
 
 namespace App\Livewire;
 
+use App\Services\GeminiLanguageService;
 use App\Services\PromptTemplateService;
 use Illuminate\Contracts\View\View;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
@@ -22,18 +24,27 @@ class PromptTemplateManager extends Component
 
     public string $promptText = '';
 
+    public string $selectedLanguageCode = '';
+
     public ?string $successMessage = null;
 
     public ?string $errorMessage = null;
 
-    /** @var list<array{id: int, title: string, prompt_text: string}> */
+    /** @var array<string, list<array{name: string, code: string, readiness: string, label: string}>> */
+    public array $languageGroups = [];
+
+    /** @var list<array{id: int, title: string, prompt_text: string, language_code: string|null, language_name: string|null, language_readiness: string|null, language_label: string|null}> */
     public array $promptTemplates = [];
 
     /**
-     * Load prompt templates when the page is opened.
+     * Load supported languages and prompt templates when the page is opened.
      */
     public function mount(): void
     {
+        $languageService = app(GeminiLanguageService::class);
+
+        $this->languageGroups = $languageService->groups();
+        $this->selectedLanguageCode = $languageService->default()['code'];
         $this->loadPromptTemplates();
     }
 
@@ -44,7 +55,11 @@ class PromptTemplateManager extends Component
     {
         $validated = $this->validate($this->rules(), $this->validationMessages());
 
-        app(PromptTemplateService::class)->create($validated['title'], $validated['promptText']);
+        app(PromptTemplateService::class)->create(
+            $validated['title'],
+            $validated['promptText'],
+            $validated['selectedLanguageCode'],
+        );
 
         $this->title = '';
         $this->promptText = '';
@@ -81,12 +96,13 @@ class PromptTemplateManager extends Component
     /**
      * Validation rules for prompt template creation.
      *
-     * @return array<string, list<string>>
+     * @return array<string, list<mixed>>
      */
     private function rules(): array
     {
         return [
             'title' => ['required', 'string', 'min:2', 'max:120'],
+            'selectedLanguageCode' => ['required', 'string', Rule::in(app(GeminiLanguageService::class)->codes())],
             'promptText' => ['required', 'string', 'min:3', 'max:5000'],
         ];
     }
@@ -102,6 +118,8 @@ class PromptTemplateManager extends Component
             'title.required' => 'Enter a template title.',
             'title.min' => 'The template title must contain at least :min characters.',
             'title.max' => 'The template title must not be longer than :max characters.',
+            'selectedLanguageCode.required' => 'Choose a language.',
+            'selectedLanguageCode.in' => 'Choose an available language.',
             'promptText.required' => 'Enter prompt text.',
             'promptText.min' => 'The prompt text must contain at least :min characters.',
             'promptText.max' => 'The prompt text must not be longer than :max characters.',

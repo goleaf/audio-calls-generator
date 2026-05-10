@@ -60,31 +60,58 @@
                 @endif
 
                 <form wire:submit="generate" class="space-y-4">
-                    <div class="space-y-2">
-                        <label for="selectedPromptTemplateId" class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
-                            <x-icon name="notebook-pen" class="size-4 text-slate-500" />
-                            <span>Prompt template</span>
-                        </label>
+                    <div class="audio-generator__field-row">
+                        <div class="space-y-2">
+                            <label for="selectedPromptTemplateId" class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
+                                <x-icon name="notebook-pen" class="size-4 text-slate-500" />
+                                <span>Prompt template</span>
+                            </label>
 
-                        <select
-                            id="selectedPromptTemplateId"
-                            wire:model="selectedPromptTemplateId"
-                            wire:change="usePromptTemplate($event.target.value)"
-                            class="min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
-                        >
-                            <option value="">Select a saved template</option>
-                            @foreach ($promptTemplates as $template)
-                                <option value="{{ $template['id'] }}">{{ $template['title'] }}</option>
-                            @endforeach
-                        </select>
+                            <select
+                                id="selectedPromptTemplateId"
+                                wire:model="selectedPromptTemplateId"
+                                wire:change="usePromptTemplate($event.target.value)"
+                                class="min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
+                            >
+                                <option value="">Select a saved template</option>
+                                @foreach ($promptTemplates as $template)
+                                    <option value="{{ $template['id'] }}">{{ $template['title'] }}</option>
+                                @endforeach
+                            </select>
 
-                        @if ($promptTemplates === [])
-                            <p class="text-sm text-slate-500">
-                                Create templates on the
-                                <a href="{{ route('audio.prompt-templates') }}" wire:navigate class="text-slate-700 underline underline-offset-4 hover:text-slate-950">Prompt templates</a>
-                                page.
-                            </p>
-                        @endif
+                            @if ($promptTemplates === [])
+                                <p class="text-sm text-slate-500">
+                                    Create templates on the
+                                    <a href="{{ route('audio.prompt-templates') }}" wire:navigate class="text-slate-700 underline underline-offset-4 hover:text-slate-950">Prompt templates</a>
+                                    page.
+                                </p>
+                            @endif
+                        </div>
+
+                        <div class="space-y-2">
+                            <label for="selectedLanguageCode" class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
+                                <x-icon name="languages" class="size-4 text-slate-500" />
+                                <span>Language</span>
+                            </label>
+
+                            <select
+                                id="selectedLanguageCode"
+                                wire:model="selectedLanguageCode"
+                                class="min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
+                            >
+                                @foreach ($languageGroups as $readiness => $languages)
+                                    <optgroup label="{{ $readiness }}">
+                                        @foreach ($languages as $language)
+                                            <option value="{{ $language['code'] }}">{{ $language['label'] }}</option>
+                                        @endforeach
+                                    </optgroup>
+                                @endforeach
+                            </select>
+
+                            @error('selectedLanguageCode')
+                                <p class="text-sm text-red-600" wire:transition>{{ $message }}</p>
+                            @enderror
+                        </div>
                     </div>
 
                     <div class="audio-generator__field-row">
@@ -248,6 +275,10 @@
 
                                 @if ($generation['tts_voice_label'])
                                     <p class="truncate text-xs text-slate-500">{{ $generation['tts_voice_label'] }}</p>
+                                @endif
+
+                                @if ($generation['tts_language_label'])
+                                    <p class="truncate text-xs text-slate-500">{{ $generation['tts_language_label'] }}</p>
                                 @endif
 
                                 @if ($generation['error_message'])

@@ -41,14 +41,15 @@ class GeminiAudioService
     public function __construct(
         private readonly HttpFactory $http,
         private readonly GeminiVoiceService $voices,
+        private readonly GeminiLanguageService $languages,
     ) {}
 
     /**
      * Generate a WAV file from text and return its storage metadata.
      *
-     * @return array{path: string, url: string, name: string, disk: string, mime_type: string, size: int, voice: string, voice_gender: string, voice_label: string}
+     * @return array{path: string, url: string, name: string, disk: string, mime_type: string, size: int, voice: string, voice_gender: string, voice_label: string, language_code: string, language_name: string, language_readiness: string, language_label: string}
      */
-    public function generateWav(string $text, ?string $voiceName = null): array
+    public function generateWav(string $text, ?string $voiceName = null, ?string $languageCode = null): array
     {
         $apiKey = trim((string) config('services.gemini.api_key'));
 
@@ -58,7 +59,8 @@ class GeminiAudioService
 
         $model = (string) config('services.gemini.model', self::DEFAULT_MODEL);
         $voice = $this->voices->find($voiceName ?? '') ?? $this->voices->default();
-        $response = $this->requestAudio($apiKey, $model, $text, $voice['name']);
+        $language = $this->languages->find($languageCode ?? '') ?? $this->languages->default();
+        $response = $this->requestAudio($apiKey, $model, $text, $voice['name'], $language);
 
         if ($response->failed()) {
             $this->logApiFailure($response);
@@ -73,6 +75,10 @@ class GeminiAudioService
             'voice' => $voice['name'],
             'voice_gender' => $voice['gender'],
             'voice_label' => $voice['label'],
+            'language_code' => $language['code'],
+            'language_name' => $language['name'],
+            'language_readiness' => $language['readiness'],
+            'language_label' => $language['label'],
         ];
     }
 
@@ -102,8 +108,10 @@ class GeminiAudioService
 
     /**
      * Send the TTS generation request to Gemini and wrap transport failures.
+     *
+     * @param  array{name: string, code: string, readiness: string, label: string}  $language
      */
-    private function requestAudio(string $apiKey, string $model, string $text, string $voiceName): Response
+    private function requestAudio(string $apiKey, string $model, string $text, string $voiceName, array $language): Response
     {
         $baseUrl = rtrim((string) config('services.gemini.base_url'), '/');
 
@@ -120,7 +128,7 @@ class GeminiAudioService
                     (int) config('services.gemini.retry_sleep_milliseconds', self::DEFAULT_RETRY_SLEEP_MILLISECONDS),
                     throw: false,
                 )
-                ->post("/models/{$model}:generateContent", $this->payload($model, $text, $voiceName));
+                ->post("/models/{$model}:generateContent", $this->payload($model, $text, $voiceName, $language));
         } catch (ConnectionException $exception) {
             throw new AudioGenerationException('Could not connect to the Gemini API.', previous: $exception);
         } catch (Throwable $exception) {
@@ -131,16 +139,17 @@ class GeminiAudioService
     /**
      * Build the Gemini request payload for a single-speaker prebuilt voice.
      *
+     * @param  array{name: string, code: string, readiness: string, label: string}  $language
      * @return array<string, mixed>
      */
-    private function payload(string $model, string $text, string $voiceName): array
+    private function payload(string $model, string $text, string $voiceName, array $language): array
     {
         return [
             'contents' => [
                 [
                     'parts' => [
                         [
-                            'text' => $this->speechPrompt($text),
+                            'text' => $this->speechPrompt($text, $language),
                         ],
                     ],
                 ],
@@ -161,10 +170,12 @@ class GeminiAudioService
 
     /**
      * Wrap user text in a minimal instruction that prevents Gemini from speaking metadata.
+     *
+     * @param  array{name: string, code: string, readiness: string, label: string}  $language
      */
-    private function speechPrompt(string $text): string
+    private function speechPrompt(string $text, array $language): string
     {
-        return "Synthesize speech from the transcript below. Speak only the transcript text, not these instructions.\n\nTRANSCRIPT:\n{$text}";
+        return "Synthesize speech in {$language['name']} ({$language['code']}). Speak only the transcript text, not these instructions.\n\nTRANSCRIPT:\n{$text}";
     }
 
     /**

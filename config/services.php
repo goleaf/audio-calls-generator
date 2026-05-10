@@ -27,6 +27,7 @@ return [
         'base_url' => env('GEMINI_API_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta'),
         'model' => env('GEMINI_TTS_MODEL', 'gemini-3.1-flash-tts-preview'),
         'voice' => env('GEMINI_TTS_VOICE', 'Kore'),
+        'language' => env('GEMINI_TTS_LANGUAGE', 'en-US'),
         'timeout' => (int) env('GEMINI_API_TIMEOUT', 60),
         'connect_timeout' => (int) env('GEMINI_API_CONNECT_TIMEOUT', 10),
         'retries' => (int) env('GEMINI_API_RETRIES', 2),

@@ -20,6 +20,9 @@ class PromptTemplateFactory extends Factory
         return [
             'title' => fake()->words(3, true),
             'prompt_text' => fake()->paragraph(),
+            'language_code' => 'en-US',
+            'language_name' => 'English (United States)',
+            'language_readiness' => 'GA',
         ];
     }
 }

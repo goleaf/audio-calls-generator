@@ -7,6 +7,7 @@ use App\Models\AudioGeneration;
 use App\Services\AudioGenerationHistoryService;
 use App\Services\AudioVoicePreferenceService;
 use App\Services\GeminiAudioService;
+use App\Services\GeminiLanguageService;
 use App\Services\GeminiVoiceService;
 use App\Services\MasterPromptService;
 use App\Services\PromptTemplateService;
@@ -47,6 +48,8 @@ class AudioGenerator extends Component
 
     public string $selectedVoice = '';
 
+    public string $selectedLanguageCode = '';
+
     public ?string $wavPath = null;
 
     public ?string $wavUrl = null;
@@ -60,7 +63,7 @@ class AudioGenerator extends Component
     /** @var list<array<string, mixed>> */
     public array $savedGenerations = [];
 
-    /** @var list<array{id: int, title: string}> */
+    /** @var list<array{id: int, title: string, language_code: string|null, language_name: string|null, language_readiness: string|null, language_label: string|null}> */
     public array $promptTemplates = [];
 
     /** @var list<string> */
@@ -69,14 +72,20 @@ class AudioGenerator extends Component
     /** @var list<array{name: string, gender: string}> */
     public array $voiceGenerators = [];
 
+    /** @var array<string, list<array{name: string, code: string, readiness: string, label: string}>> */
+    public array $languageGroups = [];
+
     /**
-     * Initialize the form with the saved master prompt, default voice, and recent history.
+     * Initialize the form with saved prompt, default language, default voice, and recent history.
      */
     public function mount(): void
     {
         $voiceService = app(GeminiVoiceService::class);
+        $languageService = app(GeminiLanguageService::class);
 
         $this->masterPrompt = app(MasterPromptService::class)->current();
+        $this->languageGroups = $languageService->groups();
+        $this->selectedLanguageCode = $languageService->default()['code'];
         $this->voiceGenders = $voiceService->genders();
         $this->setSelectedVoice(app(AudioVoicePreferenceService::class)->current()['name']);
         $this->loadPromptTemplates();
@@ -106,12 +115,22 @@ class AudioGenerator extends Component
         $this->resetAudioResults(keepGeneration: true);
         $history = app(AudioGenerationHistoryService::class);
         $masterPrompt = $this->nullableString($this->masterPrompt);
-        $generation = $history->saveDraft($this->audioGenerationId, $masterPrompt, $validated['text'], $validated['selectedVoice']);
+        $generation = $history->saveDraft(
+            $this->audioGenerationId,
+            $masterPrompt,
+            $validated['text'],
+            $validated['selectedVoice'],
+            $validated['selectedLanguageCode'],
+        );
 
         $this->syncGenerationState($history, $generation);
 
         try {
-            $audio = app(GeminiAudioService::class)->generateWav($validated['text'], $validated['selectedVoice']);
+            $audio = app(GeminiAudioService::class)->generateWav(
+                $validated['text'],
+                $validated['selectedVoice'],
+                $validated['selectedLanguageCode'],
+            );
             $generation = $history->markWavGenerated($generation, $audio);
 
             $this->applyWavResult([
@@ -121,7 +140,12 @@ class AudioGenerator extends Component
             $this->syncGenerationState($history, $generation);
             $this->successMessage = self::SUCCESS_WAV_GENERATED;
         } catch (AudioGenerationException $exception) {
-            $generation = $history->markWavFailed($generation, $validated['selectedVoice'], $exception->getMessage());
+            $generation = $history->markWavFailed(
+                $generation,
+                $validated['selectedVoice'],
+                $validated['selectedLanguageCode'],
+                $exception->getMessage(),
+            );
 
             $this->syncGenerationState($history, $generation);
             $this->errorMessage = $exception->getMessage();
@@ -130,7 +154,12 @@ class AudioGenerator extends Component
         } catch (Throwable $exception) {
             report($exception);
 
-            $generation = $history->markWavFailed($generation, $validated['selectedVoice'], self::ERROR_UNEXPECTED_GENERATION);
+            $generation = $history->markWavFailed(
+                $generation,
+                $validated['selectedVoice'],
+                $validated['selectedLanguageCode'],
+                self::ERROR_UNEXPECTED_GENERATION,
+            );
 
             $this->syncGenerationState($history, $generation);
             $this->errorMessage = self::ERROR_UNEXPECTED_GENERATION;
@@ -161,6 +190,7 @@ class AudioGenerator extends Component
         $this->masterPrompt = (string) ($generation->master_prompt ?? $generation->prompt_brief);
         $this->text = (string) $generation->text;
         $this->setSelectedVoice((string) $generation->tts_voice);
+        $this->setSelectedLanguage((string) ($generation->tts_language_code ?: app(GeminiLanguageService::class)->default()['code']));
         $this->audioGenerationId = $generation->id;
         $this->wavPath = $generation->audio_path;
         $this->wavUrl = $generation->audio_url;
@@ -193,6 +223,7 @@ class AudioGenerator extends Component
 
         $this->selectedPromptTemplateId = (string) $template->id;
         $this->text = $template->prompt_text;
+        $this->setSelectedLanguage((string) ($template->language_code ?: app(GeminiLanguageService::class)->default()['code']));
         $this->wavPath = null;
         $this->wavUrl = null;
         $this->errorMessage = null;
@@ -288,11 +319,13 @@ class AudioGenerator extends Component
     private function textRules(): array
     {
         $voiceService = app(GeminiVoiceService::class);
+        $languageService = app(GeminiLanguageService::class);
 
         return [
             'text' => ['required', 'string', 'min:3', 'max:5000'],
             'selectedVoiceGender' => ['required', 'string', Rule::in($voiceService->genders())],
             'selectedVoice' => ['required', 'string', Rule::in($voiceService->namesForGender($this->selectedVoiceGender))],
+            'selectedLanguageCode' => ['required', 'string', Rule::in($languageService->codes())],
         ];
     }
 
@@ -326,6 +359,8 @@ class AudioGenerator extends Component
             'selectedVoiceGender.in' => 'Choose an available voice gender.',
             'selectedVoice.required' => 'Choose a voice generator.',
             'selectedVoice.in' => 'Choose a generator from the selected gender.',
+            'selectedLanguageCode.required' => 'Choose a language.',
+            'selectedLanguageCode.in' => 'Choose an available language.',
         ];
     }
 
@@ -389,6 +424,18 @@ class AudioGenerator extends Component
         $this->selectedVoiceGender = $voice['gender'];
         $this->voiceGenerators = $this->voiceOptionsForGender($voiceService, $voice['gender']);
         $this->selectedVoice = $voice['name'];
+    }
+
+    /**
+     * Set the selected language to a supported Gemini-TTS language code.
+     */
+    private function setSelectedLanguage(string $languageCode): void
+    {
+        $languageService = app(GeminiLanguageService::class);
+        $language = $languageService->find($languageCode) ?? $languageService->default();
+
+        $this->selectedLanguageCode = $language['code'];
+        $this->resetValidation('selectedLanguageCode');
     }
 
     /**

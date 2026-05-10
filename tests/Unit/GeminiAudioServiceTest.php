@@ -14,6 +14,7 @@ beforeEach(function () {
     config()->set('services.gemini.base_url', 'https://generativelanguage.googleapis.com/v1beta');
     config()->set('services.gemini.model', 'gemini-3.1-flash-tts-preview');
     config()->set('services.gemini.voice', 'Kore');
+    config()->set('services.gemini.language', 'en-US');
     config()->set('services.gemini.timeout', 60);
     config()->set('services.gemini.connect_timeout', 10);
     config()->set('services.gemini.retries', 1);
@@ -53,6 +54,9 @@ test('it stores Gemini PCM output as a public wav file', function () {
     expect($audio['voice'])->toBe('Kore');
     expect($audio['voice_gender'])->toBe('Female');
     expect($audio['voice_label'])->toBe('Female - Kore');
+    expect($audio['language_code'])->toBe('en-US');
+    expect($audio['language_name'])->toBe('English (United States)');
+    expect($audio['language_label'])->toBe('English (United States) - en-US');
 
     Storage::disk('public')->assertExists($audio['path']);
 
@@ -67,6 +71,7 @@ test('it stores Gemini PCM output as a public wav file', function () {
         return $request->method() === 'POST'
             && Str::contains($request->url(), '/models/gemini-3.1-flash-tts-preview:generateContent')
             && $request->hasHeader('x-goog-api-key', 'test-key')
+            && Str::contains(data_get($request->data(), 'contents.0.parts.0.text'), 'English (United States) (en-US)')
             && Str::contains(data_get($request->data(), 'contents.0.parts.0.text'), 'TRANSCRIPT:')
             && Str::contains(data_get($request->data(), 'contents.0.parts.0.text'), 'Read this text.')
             && data_get($request->data(), 'generationConfig.responseModalities.0') === 'AUDIO'
@@ -94,13 +99,17 @@ test('it sends the selected voice generator to Gemini', function () {
         ]),
     ]);
 
-    $audio = app(GeminiAudioService::class)->generateWav('Read this text.', 'Puck');
+    $audio = app(GeminiAudioService::class)->generateWav('Read this text.', 'Puck', 'lt-LT');
 
     expect($audio['voice'])->toBe('Puck')
         ->and($audio['voice_gender'])->toBe('Male')
-        ->and($audio['voice_label'])->toBe('Male - Puck');
+        ->and($audio['voice_label'])->toBe('Male - Puck')
+        ->and($audio['language_code'])->toBe('lt-LT')
+        ->and($audio['language_name'])->toBe('Lithuanian (Lithuania)')
+        ->and($audio['language_readiness'])->toBe('Preview');
 
-    Http::assertSent(fn (Request $request): bool => data_get($request->data(), 'generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName') === 'Puck');
+    Http::assertSent(fn (Request $request): bool => data_get($request->data(), 'generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName') === 'Puck'
+        && Str::contains(data_get($request->data(), 'contents.0.parts.0.text'), 'Lithuanian (Lithuania) (lt-LT)'));
 });
 
 test('it stores relative audio urls when the public disk has an absolute host', function () {

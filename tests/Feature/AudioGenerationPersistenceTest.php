@@ -21,7 +21,7 @@ test('it saves direct audio generation information with a selected male voice', 
     $this->mock(GeminiAudioService::class)
         ->shouldReceive('generateWav')
         ->once()
-        ->with('Welcome to the demo.', 'Puck')
+        ->with('Welcome to the demo.', 'Puck', 'en-US')
         ->andReturn([
             'path' => 'audio/demo.wav',
             'url' => '/storage/audio/demo.wav',
@@ -32,6 +32,10 @@ test('it saves direct audio generation information with a selected male voice', 
             'voice' => 'Puck',
             'voice_gender' => 'Male',
             'voice_label' => 'Male - Puck',
+            'language_code' => 'en-US',
+            'language_name' => 'English (United States)',
+            'language_readiness' => 'GA',
+            'language_label' => 'English (United States) - en-US',
         ]);
 
     Livewire::test(AudioGenerator::class)
@@ -62,6 +66,9 @@ test('it saves direct audio generation information with a selected male voice', 
         'tts_voice' => 'Puck',
         'tts_voice_gender' => 'Male',
         'tts_voice_label' => 'Male - Puck',
+        'tts_language_code' => 'en-US',
+        'tts_language_name' => 'English (United States)',
+        'tts_language_readiness' => 'GA',
         'audio_sample_rate' => 24000,
         'audio_channels' => 1,
         'audio_sample_width' => 2,
@@ -72,7 +79,7 @@ test('it saves the prompt before calling Gemini to generate audio', function () 
     $this->mock(GeminiAudioService::class)
         ->shouldReceive('generateWav')
         ->once()
-        ->with('Save this text before audio exists.', 'Kore')
+        ->with('Save this text before audio exists.', 'Kore', 'en-US')
         ->andReturnUsing(function (): array {
             expect(AudioGeneration::query()
                 ->where('master_prompt', 'Persist this master prompt immediately.')
@@ -90,6 +97,10 @@ test('it saves the prompt before calling Gemini to generate audio', function () 
                 'voice' => 'Kore',
                 'voice_gender' => 'Female',
                 'voice_label' => 'Female - Kore',
+                'language_code' => 'en-US',
+                'language_name' => 'English (United States)',
+                'language_readiness' => 'GA',
+                'language_label' => 'English (United States) - en-US',
             ];
         });
 
@@ -106,6 +117,7 @@ test('it saves the prompt before calling Gemini to generate audio', function () 
         'text' => 'Save this text before audio exists.',
         'status' => AudioGeneration::STATUS_WAV_GENERATED,
         'audio_path' => 'audio/saved-before-call.wav',
+        'tts_language_code' => 'en-US',
     ]);
 });
 
@@ -113,7 +125,7 @@ test('it saves direct audio generation information to the database', function ()
     $this->mock(GeminiAudioService::class)
         ->shouldReceive('generateWav')
         ->once()
-        ->with('Direct text', 'Kore')
+        ->with('Direct text', 'Kore', 'en-US')
         ->andReturn([
             'path' => 'audio/direct.wav',
             'url' => '/storage/audio/direct.wav',
@@ -124,6 +136,10 @@ test('it saves direct audio generation information to the database', function ()
             'voice' => 'Kore',
             'voice_gender' => 'Female',
             'voice_label' => 'Female - Kore',
+            'language_code' => 'en-US',
+            'language_name' => 'English (United States)',
+            'language_readiness' => 'GA',
+            'language_label' => 'English (United States) - en-US',
         ]);
 
     Livewire::test(AudioGenerator::class)
@@ -142,6 +158,7 @@ test('it saves direct audio generation information to the database', function ()
         'tts_voice' => 'Kore',
         'tts_voice_gender' => 'Female',
         'tts_voice_label' => 'Female - Kore',
+        'tts_language_code' => 'en-US',
     ]);
 });
 
@@ -149,7 +166,7 @@ test('it normalizes generated audio urls before saving them for playback', funct
     $this->mock(GeminiAudioService::class)
         ->shouldReceive('generateWav')
         ->once()
-        ->with('Direct text', 'Kore')
+        ->with('Direct text', 'Kore', 'en-US')
         ->andReturn([
             'path' => 'audio/direct.wav',
             'url' => 'http://audio-calls-generator.test/storage/audio/direct.wav',
@@ -160,6 +177,10 @@ test('it normalizes generated audio urls before saving them for playback', funct
             'voice' => 'Kore',
             'voice_gender' => 'Female',
             'voice_label' => 'Female - Kore',
+            'language_code' => 'en-US',
+            'language_name' => 'English (United States)',
+            'language_readiness' => 'GA',
+            'language_label' => 'English (United States) - en-US',
         ]);
 
     Livewire::test(AudioGenerator::class)
@@ -188,6 +209,7 @@ test('it loads a previous prompt into the form', function () {
         ->assertSet('text', 'The doors open at eight.')
         ->assertSet('selectedVoiceGender', 'Male')
         ->assertSet('selectedVoice', 'Puck')
+        ->assertSet('selectedLanguageCode', 'en-US')
         ->assertSet('voiceGenerators.0.name', 'Puck')
         ->assertSet('audioGenerationId', $generation->id);
 });
@@ -196,7 +218,7 @@ test('it saves audio generation errors to the database', function () {
     $this->mock(GeminiAudioService::class)
         ->shouldReceive('generateWav')
         ->once()
-        ->with('Direct text', 'Puck')
+        ->with('Direct text', 'Puck', 'en-US')
         ->andThrow(new AudioGenerationException('Gemini API key is not configured.'));
 
     Livewire::test(AudioGenerator::class)
@@ -213,6 +235,7 @@ test('it saves audio generation errors to the database', function () {
         'tts_voice' => 'Puck',
         'tts_voice_gender' => 'Male',
         'tts_voice_label' => 'Male - Puck',
+        'tts_language_code' => 'en-US',
         'error_message' => 'Gemini API key is not configured.',
     ]);
 });
