@@ -29,8 +29,6 @@ class AudioGenerator extends Component
 
     private const SUCCESS_PROMPT_REMOVED = 'Prompt has been removed.';
 
-    private const SUCCESS_TEMPLATE_LOADED = 'Prompt template has been loaded.';
-
     private const ERROR_PROMPT_NOT_FOUND = 'Prompt was not found.';
 
     private const ERROR_TEMPLATE_NOT_FOUND = 'Prompt template was not found.';
@@ -202,7 +200,7 @@ class AudioGenerator extends Component
         $this->wavPath = null;
         $this->wavUrl = null;
         $this->errorMessage = null;
-        $this->successMessage = self::SUCCESS_TEMPLATE_LOADED;
+        $this->successMessage = null;
     }
 
     /**

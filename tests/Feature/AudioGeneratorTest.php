@@ -58,11 +58,12 @@ test('audio generator loads every saved prompt template setting', function () {
         ->assertSet('selectedVoice', 'Puck')
         ->assertSet('text', 'Ask the caller if they need more help with their order.')
         ->assertSet('selectedTemplate.title', 'Follow up call')
+        ->assertSet('successMessage', null)
         ->assertSee('Master prompt')
         ->assertSee('Prompt text')
         ->assertSee('Male - Puck')
         ->assertSee('Lithuanian (Lithuania) - lt-LT')
-        ->assertSet('successMessage', 'Prompt template has been loaded.');
+        ;
 });
 
 test('it generates wav audio using edited prompt values from the main page', function () {
