@@ -84,6 +84,29 @@ test('it saves the selected voice preference without creating a previous prompt'
     ]);
 });
 
+test('it saves voice select changes without creating a previous prompt', function () {
+    Livewire::test(AudioGenerator::class)
+        ->set('selectedVoiceGender', 'Male')
+        ->assertSet('audioGenerationId', null)
+        ->assertSet('selectedVoiceGender', 'Male')
+        ->assertSet('selectedVoice', 'Puck')
+        ->assertSet('savedGenerations', [])
+        ->set('selectedVoice', 'Charon')
+        ->assertSet('audioGenerationId', null)
+        ->assertSet('selectedVoiceGender', 'Male')
+        ->assertSet('selectedVoice', 'Charon')
+        ->assertSet('savedGenerations', []);
+
+    expect(AudioGeneration::query()->count())->toBe(0);
+
+    $this->assertDatabaseHas('audio_voice_preferences', [
+        'key' => AudioVoicePreference::CURRENT_KEY,
+        'tts_voice' => 'Charon',
+        'tts_voice_gender' => 'Male',
+        'tts_voice_label' => 'Male - Charon',
+    ]);
+});
+
 test('it loads the saved voice preference on the page', function () {
     AudioVoicePreference::factory()->create([
         'key' => AudioVoicePreference::CURRENT_KEY,

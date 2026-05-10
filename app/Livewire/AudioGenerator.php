@@ -155,6 +155,22 @@ class AudioGenerator extends Component
     }
 
     /**
+     * Persist the selected gender when Livewire updates the bound select field.
+     */
+    public function updatedSelectedVoiceGender(string $gender): void
+    {
+        $this->selectVoiceGender($gender);
+    }
+
+    /**
+     * Persist the selected voice name when Livewire updates the bound select field.
+     */
+    public function updatedSelectedVoice(string $voiceName): void
+    {
+        $this->selectVoice($voiceName);
+    }
+
+    /**
      * Select a gender, refresh the available voice names, and save the voice preference.
      */
     public function selectVoiceGender(string $gender): void
