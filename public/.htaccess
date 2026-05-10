@@ -5,6 +5,14 @@
 
     RewriteEngine On
 
+    # Canonical shared-hosting domain for the production subdomain.
+    RewriteCond %{HTTP_HOST} !^audio-calls-generator\.prus\.dev$ [NC]
+    RewriteRule ^ https://audio-calls-generator.prus.dev%{REQUEST_URI} [L,R=301]
+
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
+    RewriteRule ^ https://audio-calls-generator.prus.dev%{REQUEST_URI} [L,R=301]
+
     # Handle Authorization Header
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

@@ -1,5 +1,22 @@
 <?php
 
+$resolveFilesystemPath = static function (?string $path): ?string {
+    if (! is_string($path) || trim($path) === '') {
+        return null;
+    }
+
+    $path = trim($path);
+
+    if (str_starts_with($path, '/') || preg_match('/^[A-Za-z]:[\\\\\/]/', $path) === 1) {
+        return $path;
+    }
+
+    return base_path($path);
+};
+
+$publicDiskRoot = $resolveFilesystemPath(env('PUBLIC_DISK_ROOT')) ?? storage_path('app/public');
+$publicStorageLink = $resolveFilesystemPath(env('PUBLIC_STORAGE_LINK')) ?? public_path('storage');
+
 return [
 
     /*
@@ -40,8 +57,8 @@ return [
 
         'public' => [
             'driver' => 'local',
-            'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
+            'root' => $publicDiskRoot,
+            'url' => rtrim(env('PUBLIC_DISK_URL') ?: rtrim(env('APP_URL', 'http://localhost'), '/').'/storage', '/'),
             'visibility' => 'public',
             'throw' => false,
             'report' => false,
@@ -73,8 +90,8 @@ return [
     |
     */
 
-    'links' => [
-        public_path('storage') => storage_path('app/public'),
+    'links' => $publicStorageLink === $publicDiskRoot ? [] : [
+        $publicStorageLink => $publicDiskRoot,
     ],
 
 ];
