@@ -73,6 +73,12 @@
             <path d="M12 19v3" />
             @break
 
+        @case('message-square-text')
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            <path d="M8 7h8" />
+            <path d="M8 11h6" />
+            @break
+
         @case('notebook-pen')
             <path d="M13.4 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-7.4" />
             <path d="M2 6h4" />
@@ -80,6 +86,11 @@
             <path d="M2 14h4" />
             <path d="M2 18h4" />
             <path d="M21.4 5.4a2.1 2.1 0 0 0-3-3L12 8.8V12h3.2z" />
+            @break
+
+        @case('pencil')
+            <path d="M21.2 5.8a2 2 0 0 0-3-3L4 17v3h3z" />
+            <path d="M15 5l4 4" />
             @break
 
         @case('play')
@@ -112,6 +123,11 @@
             <path d="M11 5 6 9H2v6h4l5 4z" />
             <path d="M15.5 8.5a5 5 0 0 1 0 7" />
             <path d="M19 5a9 9 0 0 1 0 14" />
+            @break
+
+        @case('x')
+            <path d="M18 6 6 18" />
+            <path d="m6 6 12 12" />
             @break
 
         @default

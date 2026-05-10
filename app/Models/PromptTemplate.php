@@ -10,10 +10,14 @@ use Illuminate\Database\Eloquent\Model;
 
 #[Fillable([
     'title',
+    'master_prompt',
     'prompt_text',
     'language_code',
     'language_name',
     'language_readiness',
+    'tts_voice',
+    'tts_voice_gender',
+    'tts_voice_label',
 ])]
 class PromptTemplate extends Model
 {
@@ -31,10 +35,14 @@ class PromptTemplate extends Model
             ->select([
                 'id',
                 'title',
+                'master_prompt',
                 'prompt_text',
                 'language_code',
                 'language_name',
                 'language_readiness',
+                'tts_voice',
+                'tts_voice_gender',
+                'tts_voice_label',
                 'created_at',
                 'updated_at',
             ])

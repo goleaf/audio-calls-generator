@@ -15,6 +15,8 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->call(PromptTemplateSeeder::class);
+
         // User::factory(10)->create();
 
         User::factory()->create([

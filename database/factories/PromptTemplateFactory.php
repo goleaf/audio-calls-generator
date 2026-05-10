@@ -19,10 +19,14 @@ class PromptTemplateFactory extends Factory
     {
         return [
             'title' => fake()->words(3, true),
+            'master_prompt' => 'Write a short, ready-to-speak audio script. Return only the final script text.',
             'prompt_text' => fake()->paragraph(),
             'language_code' => 'en-US',
             'language_name' => 'English (United States)',
             'language_readiness' => 'GA',
+            'tts_voice' => 'Kore',
+            'tts_voice_gender' => 'Female',
+            'tts_voice_label' => 'Female - Kore',
         ];
     }
 }
