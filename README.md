@@ -28,6 +28,18 @@ Laravel and Livewire application for generating WAV audio files from text with t
 - Vite production assets built into root `build/`.
 - Minimal responsive Blade and Tailwind interface.
 
+## Application Flow
+
+The main page is available at `/`.
+
+1. Save the master prompt. This becomes the reusable instruction for future audio ideas.
+2. Choose `Voice gender`. The voice generator list refreshes to show only voices for that gender.
+3. Choose `Voice generator`. The selected gender and generator are saved immediately as the current voice preference.
+4. Enter the text that should become audio.
+5. Generate audio. The app saves the prompt, sends the text and selected voice to Gemini, stores the WAV metadata, and shows the player and download link.
+
+Changing the voice gender or voice generator does not create a previous prompt. A previous prompt is created only when audio generation starts.
+
 ## Project Layout For Shared Hosting
 
 This project is organized for shared hosting where the subdomain document root is the project root `/`.
@@ -212,6 +224,17 @@ vendor/bin/pint --dirty --format agent
 npm run build
 composer validate --strict --no-interaction
 ```
+
+## Verification
+
+Before deployment, run:
+
+```bash
+php artisan test --compact
+npm run build
+```
+
+The shared-hosting tests verify that Laravel uses the project root as the public path, the legacy `public/` folder is not required, and Vite builds assets into root `build/`.
 
 ## Main Files
 
