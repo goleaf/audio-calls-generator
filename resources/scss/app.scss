@@ -102,6 +102,52 @@ $xl-breakpoint: 80rem;
         width: 100%;
     }
 
+    &__button-content {
+        flex-wrap: nowrap;
+        justify-content: center;
+        min-width: 0;
+        white-space: nowrap;
+    }
+
+    &__button-spinner {
+        animation: audio-generator-spin 700ms linear infinite;
+        border: 2px solid rgb(255 255 255 / 35%);
+        border-radius: 9999px;
+        border-top-color: #fff;
+        display: inline-block;
+        flex: 0 0 auto;
+        height: 1rem;
+        width: 1rem;
+    }
+
+    &__button-spinner--dark {
+        border-color: rgb(15 23 42 / 18%);
+        border-top-color: #0f172a;
+    }
+
+    &__loading-card {
+        align-self: stretch;
+        background: #f8fafc;
+        border: 1px solid #e2e8f0;
+        border-radius: 0.5rem;
+        display: none;
+        min-height: 2.75rem;
+        padding: 0.625rem 0.75rem;
+    }
+
+    &__loading-icon {
+        align-items: center;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 9999px;
+        color: #475569;
+        display: inline-flex;
+        flex: 0 0 auto;
+        height: 1.75rem;
+        justify-content: center;
+        width: 1.75rem;
+    }
+
     &__history-actions {
         flex-wrap: wrap;
         justify-content: flex-end;
@@ -121,6 +167,10 @@ $xl-breakpoint: 80rem;
 
         &__button {
             width: auto;
+        }
+
+        &__loading-card {
+            align-self: center;
         }
     }
 
@@ -189,5 +239,11 @@ $xl-breakpoint: 80rem;
             scroll-behavior: auto !important;
             transition-duration: 0.01ms !important;
         }
+    }
+}
+
+@keyframes audio-generator-spin {
+    to {
+        transform: rotate(360deg);
     }
 }

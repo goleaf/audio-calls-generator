@@ -33,12 +33,12 @@
                             wire:target="saveMasterPrompt"
                             class="audio-generator__button inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                            <span wire:loading.remove wire:target="saveMasterPrompt" class="inline-flex items-center gap-2">
+                            <span wire:loading.remove wire:target="saveMasterPrompt" class="audio-generator__button-content inline-flex items-center gap-2">
                                 <x-icon name="save" />
                                 <span>Save master prompt</span>
                             </span>
-                            <span wire:loading wire:target="saveMasterPrompt" class="inline-flex items-center gap-2">
-                                <x-icon name="loader-circle" class="animate-spin" />
+                            <span wire:loading.flex wire:target="saveMasterPrompt" class="audio-generator__button-content items-center gap-2">
+                                <span class="audio-generator__button-spinner audio-generator__button-spinner--dark" aria-hidden="true"></span>
                                 <span>Saving...</span>
                             </span>
                         </button>
@@ -135,20 +135,22 @@
                             wire:target="generate"
                             class="audio-generator__button inline-flex min-h-11 items-center justify-center rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
                         >
-                            <span wire:loading.remove wire:target="generate" class="inline-flex items-center gap-2">
+                            <span wire:loading.remove wire:target="generate" class="audio-generator__button-content inline-flex items-center gap-2">
                                 <x-icon name="audio-lines" />
                                 <span>Generate audio</span>
                             </span>
-                            <span wire:loading wire:target="generate" class="inline-flex items-center gap-2">
-                                <x-icon name="loader-circle" class="animate-spin" />
-                                <span>Generating...</span>
+                            <span wire:loading.flex wire:target="generate" class="audio-generator__button-content items-center gap-2">
+                                <span class="audio-generator__button-spinner" aria-hidden="true"></span>
+                                <span>Generating WAV</span>
                             </span>
                         </button>
 
-                        <span wire:loading wire:target="generate" class="inline-flex items-center gap-2 text-sm text-slate-500">
-                            <x-icon name="audio-lines" />
-                            Creating WAV...
-                        </span>
+                        <div wire:loading.flex wire:target="generate" class="audio-generator__loading-card items-center gap-3 text-sm text-slate-600">
+                            <span class="audio-generator__loading-icon" aria-hidden="true">
+                                <x-icon name="audio-lines" class="size-3.5" />
+                            </span>
+                            <span class="font-medium text-slate-700">Creating WAV...</span>
+                        </div>
                     </div>
                 </form>
 
