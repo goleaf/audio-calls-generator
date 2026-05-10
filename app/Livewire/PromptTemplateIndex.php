@@ -73,4 +73,24 @@ class PromptTemplateIndex extends Component
     {
         return $this->listPromptTemplates->handle(new ListPromptTemplatesRequest);
     }
+
+    /**
+     * Return a flag icon for the template language region code.
+     */
+    public function languageFlag(?string $languageCode): string
+    {
+        $parts = preg_split('/[-_]/', trim((string) $languageCode));
+        $regionCode = strtoupper($parts[1] ?? '');
+
+        if (! preg_match('/^[A-Z]{2}$/', $regionCode)) {
+            return '';
+        }
+
+        return $this->regionalIndicator($regionCode[0]) . $this->regionalIndicator($regionCode[1]);
+    }
+
+    private function regionalIndicator(string $letter): string
+    {
+        return mb_chr(0x1F1E6 + (ord($letter) - ord('A')));
+    }
 }

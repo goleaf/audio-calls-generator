@@ -31,7 +31,9 @@
                         >
                             <option value="">Select a saved template</option>
                             @foreach ($promptTemplates as $template)
-                                <option value="{{ $template['id'] }}">{{ $template['title'] }}</option>
+                                <option value="{{ $template['id'] }}">
+                                    {{ $this->languageFlag($template['language_code']) }} {{ $template['title'] }}
+                                </option>
                             @endforeach
                         </select>
 
@@ -42,7 +44,16 @@
                         @if ($promptTemplates === [])
                             <p class="text-sm text-slate-500">
                                 Create templates on the
-                                <a href="{{ route('audio.prompt-templates') }}" wire:navigate class="text-slate-700 underline underline-offset-4 hover:text-slate-950">Prompt templates</a>
+                                <x-button
+                                    as="a"
+                                    href="{{ route('audio.prompt-templates') }}"
+                                    wire:navigate
+                                    size="sm"
+                                    class="!w-auto"
+                                >
+                                    <x-icon name="notebook-pen" class="size-3.5" />
+                                    <span>Prompt templates</span>
+                                </x-button>
                                 page.
                             </p>
                         @endif
@@ -72,7 +83,12 @@
                                         <x-icon name="languages" class="size-3.5" />
                                         <span>Language</span>
                                     </p>
-                                    <p class="break-words text-sm font-medium text-slate-900">{{ $selectedTemplate['language_label'] }}</p>
+                                    <p class="inline-flex items-center gap-1.5 break-words text-sm font-medium text-slate-900">
+                                        @if ($selectedTemplate['language_code'] !== null && $this->languageFlag($selectedTemplate['language_code']) !== '')
+                                            <span class="leading-none" role="img" aria-label="Language flag">{{ $this->languageFlag($selectedTemplate['language_code']) }}</span>
+                                        @endif
+                                        <span>{{ $selectedTemplate['language_label'] }}</span>
+                                    </p>
                                 </div>
                             </div>
 
@@ -125,21 +141,21 @@
                     @endif
 
                     <div class="audio-generator__actions">
-                        <button
-                            type="submit"
-                            wire:loading.attr="disabled"
-                            wire:target="generate"
-                            class="audio-generator__button inline-flex min-h-11 items-center justify-center rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            <span wire:loading.remove wire:target="generate" class="audio-generator__button-content inline-flex items-center gap-2">
-                                <x-icon name="audio-lines" />
-                                <span>Generate audio</span>
-                            </span>
-                            <span wire:loading.flex wire:target="generate" class="audio-generator__button-content items-center gap-2">
-                                <span class="audio-generator__button-spinner" aria-hidden="true"></span>
-                                <span>Generating WAV</span>
-                            </span>
-                        </button>
+                <x-button
+                    type="submit"
+                    size="lg"
+                    wire:loading.attr="disabled"
+                    wire:target="generate"
+                >
+                    <span wire:loading.remove wire:target="generate" class="audio-generator__button-content inline-flex items-center gap-2">
+                        <x-icon name="audio-lines" />
+                        <span>Generate audio</span>
+                    </span>
+                    <span wire:loading.flex wire:target="generate" class="audio-generator__button-content items-center gap-2">
+                        <span class="audio-generator__button-spinner" aria-hidden="true"></span>
+                        <span>Generating WAV</span>
+                    </span>
+                </x-button>
 
                         <div wire:loading.flex wire:target="generate" class="audio-generator__loading-card items-center gap-3 text-sm text-slate-600">
                             <span class="audio-generator__loading-icon" aria-hidden="true">
@@ -157,10 +173,16 @@
                                 <x-icon name="volume" class="text-slate-500" />
                                 <span>WAV</span>
                             </h2>
-                            <a href="{{ $wavUrl }}" download class="inline-flex items-center gap-2 text-sm text-slate-600 underline underline-offset-4 hover:text-slate-950">
+                            <x-button
+                                as="a"
+                                href="{{ $wavUrl }}?download=1"
+                                download
+                                size="sm"
+                                class="!w-auto"
+                            >
                                 <x-icon name="download" />
-                                Download WAV
-                            </a>
+                                <span>Download WAV</span>
+                            </x-button>
                         </div>
 
                         <audio controls class="w-full">
@@ -185,25 +207,25 @@
                                 <div class="flex flex-col gap-2 min-[30rem]:flex-row min-[30rem]:items-center min-[30rem]:justify-between">
                                     <span class="text-xs text-slate-500">{{ str_replace('_', ' ', $generation['status']) }}</span>
                                     <div class="audio-generator__history-actions flex items-center gap-3">
-                                        <button
+                                        <x-button
                                             type="button"
+                                            size="sm"
                                             wire:click="usePrompt({{ $generation['id'] }})"
-                                            class="inline-flex min-h-8 items-center gap-1.5 text-sm text-slate-700 underline underline-offset-4 hover:text-slate-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
                                         >
                                             <x-icon name="play" class="size-3.5" />
                                             <span>Use</span>
-                                        </button>
+                                        </x-button>
 
-                                        <button
+                                        <x-button
                                             type="button"
+                                            size="sm"
                                             wire:click="removePrompt({{ $generation['id'] }})"
                                             wire:loading.attr="disabled"
                                             wire:target="removePrompt({{ $generation['id'] }})"
-                                            class="inline-flex min-h-8 items-center gap-1.5 text-sm text-red-600 underline underline-offset-4 hover:text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                                         >
                                             <x-icon name="trash" class="size-3.5" />
                                             <span>Remove</span>
-                                        </button>
+                                        </x-button>
                                     </div>
                                 </div>
 
@@ -212,15 +234,27 @@
                                 @endif
 
                                 @if ($generation['audio_file_name'])
-                                    <p class="truncate text-xs text-slate-500">{{ $generation['audio_file_name'] }}</p>
+                                    <p class="inline-flex items-center gap-1.5 break-words text-xs text-slate-500">
+                                        <x-icon name="file-text" class="size-3.5 shrink-0" />
+                                        <span>{{ $generation['audio_file_name'] }}</span>
+                                    </p>
                                 @endif
 
                                 @if ($generation['tts_voice_label'])
-                                    <p class="truncate text-xs text-slate-500">{{ $generation['tts_voice_label'] }}</p>
+                                    <p class="inline-flex items-center gap-1.5 break-words text-xs text-slate-500">
+                                        <x-icon name="mic" class="size-3.5 shrink-0" />
+                                        <span>{{ $generation['tts_voice_label'] }}</span>
+                                    </p>
                                 @endif
 
                                 @if ($generation['tts_language_label'])
-                                    <p class="truncate text-xs text-slate-500">{{ $generation['tts_language_label'] }}</p>
+                                    <p class="inline-flex items-center gap-1.5 break-words text-xs text-slate-500">
+                                        @if (($generation['tts_language_flag'] ?? '') !== '')
+                                            <span class="leading-none" role="img" aria-label="Language flag">{{ $generation['tts_language_flag'] }}</span>
+                                        @endif
+                                        <x-icon name="languages" class="size-3.5 shrink-0" />
+                                        <span>{{ $generation['tts_language_label'] }}</span>
+                                    </p>
                                 @endif
 
                                 @if ($generation['error_message'])
@@ -228,10 +262,22 @@
                                 @endif
 
                                 @if ($generation['audio_url'])
-                                    <a href="{{ $generation['audio_url'] }}" download class="inline-flex items-center gap-1.5 text-sm text-slate-600 underline underline-offset-4 hover:text-slate-950">
-                                        <x-icon name="download" class="size-3.5" />
-                                        <span>Download</span>
-                                    </a>
+                                    <div class="space-y-2">
+                                        <audio controls preload="metadata" class="w-full">
+                                            <source src="{{ $generation['audio_url'] }}" type="audio/wav">
+                                        </audio>
+
+                                        <x-button
+                                            as="a"
+                                            href="{{ $generation['audio_url'] }}?download=1"
+                                            download
+                                            size="sm"
+                                            class="!w-auto"
+                                        >
+                                            <x-icon name="download" class="size-3.5" />
+                                            <span>Download</span>
+                                        </x-button>
+                                    </div>
                                 @endif
                             </div>
                         @endforeach

@@ -180,6 +180,11 @@ class GeminiLanguageService
      */
     private function label(string $name, string $code): string
     {
-        return "{$name} - {$code}";
+        return $this->plainLanguageName($name);
+    }
+
+    private function plainLanguageName(string $name): string
+    {
+        return trim(preg_replace('/\\s*\\([^)]*\\)\\s*$/', '', $name));
     }
 }

@@ -67,6 +67,25 @@ class PromptTemplateSeeder extends Seeder
                 'language_code' => 'lt-LT',
                 'voice' => 'Aoede',
             ],
+            [
+                'title' => 'Skambinimas dėl neapmokėtos sąskaitos',
+                'master_prompt' => 'Kalbėk lietuviškai formalioje ir pagarbiame kliento aptarnavimo kalboje. Tekstas turi būti sklandus, aiškus ir trumpai aiškinantis delspinigius.',
+                'prompt_text' => <<<'TEXT'
+Sveiki. Skambina uždaroji akcinė bendrovė „Juris“.
+
+Skambiname dėl neapmokėtos sąskaitos.
+
+Šiuo metu matome, kad mokėjimas dar nėra gautas. Neapmokėta suma yra keturiasdešimt aštuoni eurai ir dvidešimt centų. Mokėjimo terminas buvo iki gegužės penkioliktos dienos.
+
+Primename, kad sąskaitą galite apmokėti oficialiais uždarosios akcinės bendrovės „Juris“ mokėjimo kanalais arba pagal sąskaitoje nurodytą informaciją.
+
+Dėl sąskaitos informacijos arba mokėjimo galite susisiekti su uždarosios akcinės bendrovės „Juris“ klientų aptarnavimo skyriumi oficialiais kontaktais.
+
+Dėkojame už jūsų laiką. Linkime geros dienos.
+TEXT,
+                'language_code' => 'lt-LT',
+                'voice' => 'Kore',
+            ],
         ];
     }
 

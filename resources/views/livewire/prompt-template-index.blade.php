@@ -7,14 +7,15 @@
                     <span>Prompt templates</span>
                 </h1>
 
-                <a
+                <x-button
+                    as="a"
                     href="{{ route('audio.prompt-templates.create') }}"
                     wire:navigate
-                    class="audio-generator__button inline-flex min-h-10 items-center justify-center gap-2 rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
+                    size="md"
                 >
                     <x-icon name="plus" />
                     <span>Create template</span>
-                </a>
+                </x-button>
             </div>
 
             @if ($errorMessage)
@@ -34,15 +35,50 @@
             <div class="audio-generator__table-scroll">
                 <table class="audio-generator__table">
                     <thead>
-                        <tr>
-                            <th scope="col">Title</th>
-                            <th scope="col">Master prompt</th>
-                            <th scope="col">Prompt text</th>
-                            <th scope="col">Language</th>
-                            <th scope="col">Voice gender</th>
-                            <th scope="col">Voice generator</th>
-                            <th scope="col">Actions</th>
-                        </tr>
+                            <tr>
+                                <th scope="col">
+                                    <span class="inline-flex items-center gap-1.5 whitespace-nowrap">
+                                        <x-icon name="notebook-pen" class="size-3.5" />
+                                        <span>Title</span>
+                                    </span>
+                                </th>
+                                <th scope="col">
+                                    <span class="inline-flex items-center gap-1.5 whitespace-nowrap">
+                                        <x-icon name="message-square-text" class="size-3.5" />
+                                        <span>Master prompt</span>
+                                    </span>
+                                </th>
+                                <th scope="col">
+                                    <span class="inline-flex items-center gap-1.5 whitespace-nowrap">
+                                        <x-icon name="file-text" class="size-3.5" />
+                                        <span>Prompt text</span>
+                                    </span>
+                                </th>
+                                <th scope="col">
+                                    <span class="inline-flex items-center gap-1.5 whitespace-nowrap">
+                                        <x-icon name="languages" class="size-3.5" />
+                                        <span>Language</span>
+                                    </span>
+                                </th>
+                                <th scope="col">
+                                    <span class="inline-flex items-center gap-1.5 whitespace-nowrap">
+                                        <x-icon name="users" class="size-3.5" />
+                                        <span>Voice gender</span>
+                                    </span>
+                                </th>
+                                <th scope="col">
+                                    <span class="inline-flex items-center gap-1.5 whitespace-nowrap">
+                                        <x-icon name="mic" class="size-3.5" />
+                                        <span>Voice generator</span>
+                                    </span>
+                                </th>
+                                <th scope="col">
+                                    <span class="inline-flex items-center gap-1.5 whitespace-nowrap">
+                                        <x-icon name="audio-lines" class="size-3.5" />
+                                        <span>Actions</span>
+                                    </span>
+                                </th>
+                            </tr>
                     </thead>
                     <tbody>
                         @forelse ($this->promptTemplates as $template)
@@ -57,37 +93,45 @@
                                     <span class="line-clamp-3 break-words">{{ $template['prompt_text'] }}</span>
                                 </td>
                                 <td>
-                                    <span class="line-clamp-2 break-words">{{ $template['language_label'] }}</span>
+                                    <span class="inline-flex items-center gap-1.5 break-words">
+                                        @if ($this->languageFlag($template['language_code']) !== '')
+                                            <span class="shrink-0" role="img" aria-label="Language flag">{{ $this->languageFlag($template['language_code']) }}</span>
+                                        @endif
+                                        <span>{{ $template['language_label'] }}</span>
+                                    </span>
                                 </td>
                                 <td>{{ $template['tts_voice_gender'] }}</td>
                                 <td>{{ $template['tts_voice_label'] }}</td>
                                 <td>
-                                    <div class="audio-generator__table-actions">
-                                        <a
+                                    <div class="audio-generator__table-actions flex-nowrap">
+                                        <x-button
+                                            as="a"
                                             href="{{ route('audio.prompt-templates.edit', $template['id']) }}"
                                             wire:navigate
-                                            class="inline-flex min-h-8 items-center gap-1.5 text-sm text-slate-700 underline underline-offset-4 hover:text-slate-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
+                                            class="!w-auto shrink-0 whitespace-nowrap"
+                                            size="sm"
                                         >
                                             <x-icon name="pencil" class="size-3.5" />
                                             <span>Edit</span>
-                                        </a>
+                                        </x-button>
 
-                                        <button
+                                        <x-button
                                             type="button"
+                                            class="!w-auto shrink-0 whitespace-nowrap"
+                                            size="sm"
                                             wire:click="remove({{ $template['id'] }})"
                                             wire:loading.attr="disabled"
                                             wire:target="remove({{ $template['id'] }})"
-                                            class="inline-flex min-h-8 items-center gap-1.5 text-sm text-red-600 underline underline-offset-4 hover:text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                                         >
                                             <x-icon name="trash" class="size-3.5" />
                                             <span>Remove</span>
-                                        </button>
+                                        </x-button>
                                     </div>
                                 </td>
                             </tr>
                         @empty
                             <tr>
-                                <td colspan="7">No templates yet.</td>
+                                <td colspan="7" class="border-y border-slate-200 py-3 text-sm text-slate-500">No templates yet.</td>
                             </tr>
                         @endforelse
                     </tbody>

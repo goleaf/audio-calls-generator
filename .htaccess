@@ -19,6 +19,7 @@
     RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L]
 
     # Serve public storage files from storage/app/public without exposing private storage.
+    RewriteRule ^storage/audio/(.+)$ index.php [L,QSA]
     RewriteCond %{THE_REQUEST} \s/+storage/app/public/ [NC]
     RewriteRule ^storage/app/public/ - [F,L]
     RewriteRule ^storage/(.*)$ storage/app/public/$1 [L]

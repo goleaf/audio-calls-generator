@@ -1,20 +1,21 @@
 <div class="audio-generator bg-white text-slate-950">
     <main class="audio-generator__shell">
-        <section class="mx-auto w-full max-w-3xl space-y-5">
+        <section class="space-y-5">
             <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <h1 class="inline-flex items-center gap-2 text-base font-semibold text-slate-950">
                     <x-icon name="notebook-pen" class="size-4 text-slate-500" />
                     <span>{{ $editingTemplateId === null ? 'Create prompt template' : 'Edit prompt template' }}</span>
                 </h1>
 
-                <a
+                <x-button
+                    as="a"
                     href="{{ route('audio.prompt-templates') }}"
                     wire:navigate
-                    class="inline-flex min-h-10 items-center gap-2 rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
+                    size="md"
                 >
                     <x-icon name="arrow-left" />
                     <span>Back to templates</span>
-                </a>
+                </x-button>
             </div>
 
             @if ($errorMessage)
@@ -163,11 +164,11 @@
                 </div>
 
                 <div class="audio-generator__actions">
-                    <button
+                    <x-button
                         type="submit"
                         wire:loading.attr="disabled"
                         wire:target="save"
-                        class="audio-generator__button inline-flex min-h-11 items-center justify-center rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
+                        size="lg"
                     >
                         <span wire:loading.remove wire:target="save" class="audio-generator__button-content inline-flex items-center gap-2">
                             <x-icon name="save" />
@@ -177,16 +178,16 @@
                             <span class="audio-generator__button-spinner" aria-hidden="true"></span>
                             <span>{{ $editingTemplateId === null ? 'Saving...' : 'Updating...' }}</span>
                         </span>
-                    </button>
+                    </x-button>
 
-                    <button
+                    <x-button
                         type="button"
                         wire:click="cancelEdit"
-                        class="audio-generator__button inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
+                        size="lg"
                     >
                         <x-icon name="x" />
                         <span>Cancel</span>
-                    </button>
+                    </x-button>
                 </div>
             </form>
         </section>

@@ -167,6 +167,7 @@ class AudioGenerationHistoryService
                 'tts_language_code' => $generation->tts_language_code,
                 'tts_language_name' => $generation->tts_language_name,
                 'tts_language_readiness' => $generation->tts_language_readiness,
+                'tts_language_flag' => $this->languageFlag($generation->tts_language_code),
                 'tts_language_label' => $this->languageLabel($generation->tts_language_code, $generation->tts_language_name),
                 'audio_disk' => $generation->audio_disk,
                 'audio_path' => $generation->audio_path,
@@ -315,7 +316,32 @@ class AudioGenerationHistoryService
             return null;
         }
 
-        return "{$name} - {$code}";
+        return $this->plainLanguageName($name);
+    }
+
+    private function plainLanguageName(string $name): string
+    {
+        return trim(preg_replace('/\\s*\\([^)]*\\)\\s*$/', '', $name));
+    }
+
+    /**
+     * Return a regional flag emoji from a BCP-47 language region code.
+     */
+    private function languageFlag(?string $languageCode): string
+    {
+        $parts = preg_split('/[-_]/', trim((string) $languageCode));
+        $regionCode = strtoupper($parts[1] ?? '');
+
+        if (! preg_match('/^[A-Z]{2}$/', $regionCode)) {
+            return '';
+        }
+
+        return $this->regionalIndicator($regionCode[0]) . $this->regionalIndicator($regionCode[1]);
+    }
+
+    private function regionalIndicator(string $letter): string
+    {
+        return mb_chr(0x1F1E6 + (ord($letter) - ord('A')));
     }
 
     /**

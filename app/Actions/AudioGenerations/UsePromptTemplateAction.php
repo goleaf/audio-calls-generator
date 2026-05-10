@@ -22,7 +22,7 @@ class UsePromptTemplateAction
     /**
      * Load a prompt template and convert it into audio generator state.
      *
-     * @return array{template: PromptTemplate, state: array{master_prompt: string, text: string, selected_language_code: string, selected_voice_gender: string, selected_voice: string, selected_template: array{title: string, master_prompt: string, prompt_text: string, language_label: string, tts_voice_label: string}}}|null
+     * @return array{template: PromptTemplate, state: array{master_prompt: string, text: string, selected_language_code: string, selected_voice_gender: string, selected_voice: string, selected_template: array{title: string, master_prompt: string, prompt_text: string, language_code: string, language_label: string, tts_voice_label: string}}}|null
      */
     public function handle(UsePromptTemplateRequest $request): ?array
     {
@@ -45,7 +45,7 @@ class UsePromptTemplateAction
     /**
      * Convert a saved prompt template into Livewire generator state.
      *
-     * @return array{master_prompt: string, text: string, selected_language_code: string, selected_voice_gender: string, selected_voice: string, selected_template: array{title: string, master_prompt: string, prompt_text: string, language_label: string, tts_voice_label: string}}
+     * @return array{master_prompt: string, text: string, selected_language_code: string, selected_voice_gender: string, selected_voice: string, selected_template: array{title: string, master_prompt: string, prompt_text: string, language_code: string, language_label: string, tts_voice_label: string}}
      */
     private function stateFromTemplate(PromptTemplate $template): array
     {
@@ -62,6 +62,7 @@ class UsePromptTemplateAction
                 'title' => $template->title,
                 'master_prompt' => (string) $template->master_prompt,
                 'prompt_text' => $template->prompt_text,
+                'language_code' => $language['code'],
                 'language_label' => $language['label'],
                 'tts_voice_label' => $voice['label'],
             ],

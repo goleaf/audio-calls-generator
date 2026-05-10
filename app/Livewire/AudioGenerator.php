@@ -64,7 +64,7 @@ class AudioGenerator extends Component
     /** @var list<array{id: int, title: string, master_prompt: string|null, prompt_text: string, language_code: string|null, language_name: string|null, language_readiness: string|null, language_label: string|null, tts_voice: string|null, tts_voice_gender: string|null, tts_voice_label: string|null}> */
     public array $promptTemplates = [];
 
-    /** @var array{title: string, master_prompt: string, prompt_text: string, language_label: string, tts_voice_label: string}|null */
+    /** @var array{title: string, master_prompt: string, prompt_text: string, language_code: string|null, language_label: string, tts_voice_label: string}|null */
     #[Locked]
     public ?array $selectedTemplate = null;
 
@@ -227,6 +227,26 @@ class AudioGenerator extends Component
     }
 
     /**
+     * Return a flag icon for a language code.
+     */
+    public function languageFlag(?string $languageCode): string
+    {
+        $parts = preg_split('/[-_]/', trim((string) $languageCode));
+        $regionCode = strtoupper($parts[1] ?? '');
+
+        if (! preg_match('/^[A-Z]{2}$/', $regionCode)) {
+            return '';
+        }
+
+        return $this->regionalIndicator($regionCode[0]) . $this->regionalIndicator($regionCode[1]);
+    }
+
+    private function regionalIndicator(string $letter): string
+    {
+        return mb_chr(0x1F1E6 + (ord($letter) - ord('A')));
+    }
+
+    /**
      * Clear audio output state while optionally preserving the active generation id.
      */
     private function resetAudioResults(bool $keepGeneration = false): void
@@ -255,7 +275,7 @@ class AudioGenerator extends Component
     /**
      * Apply every saved prompt template setting to the audio generation state.
      *
-     * @param  array{master_prompt: string, text: string, selected_language_code: string, selected_voice_gender: string, selected_voice: string, selected_template: array{title: string, master_prompt: string, prompt_text: string, language_label: string, tts_voice_label: string}}  $state
+     * @param  array{master_prompt: string, text: string, selected_language_code: string, selected_voice_gender: string, selected_voice: string, selected_template: array{title: string, master_prompt: string, prompt_text: string, language_code: string|null, language_label: string, tts_voice_label: string}}  $state
      */
     private function applyTemplateState(array $state): void
     {

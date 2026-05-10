@@ -4,6 +4,7 @@ $compact-breakpoint: 30rem;
 $sm-breakpoint: 40rem;
 $lg-breakpoint: 64rem;
 $xl-breakpoint: 80rem;
+$fullhd-breakpoint: 120rem;
 $color-white: #fff;
 $color-slate-50: #f8fafc;
 $color-slate-200: #e2e8f0;
@@ -166,33 +167,59 @@ $table-min-width: 58rem;
     }
 
     &__table-scroll {
-        border-bottom: 1px solid $color-slate-200;
-        border-top: 1px solid $color-slate-200;
+        background: $color-white;
+        border: 1px solid $color-slate-200;
+        border-radius: 0.75rem;
+        box-shadow: 0 8px 24px rgb(15 23 42 / 4%);
+        overflow: auto;
         overflow-x: auto;
     }
 
     &__table {
+        border-collapse: separate;
+        border-spacing: 0;
         font-size: 0.875rem;
         min-width: $table-min-width;
         text-align: left;
         width: 100%;
 
         thead {
+            background: $color-slate-50;
             border-bottom: 1px solid $color-slate-200;
             color: $color-slate-500;
             font-size: 0.75rem;
             letter-spacing: 0.025em;
+            position: sticky;
+            top: 0;
             text-transform: uppercase;
+            z-index: 1;
         }
 
-        tbody > tr + tr {
-            border-top: 1px solid $color-slate-200;
+        thead tr {
+            background: $color-slate-50;
         }
 
-        th,
+        th {
+            padding: 0.85rem 0.9rem;
+            white-space: nowrap;
+        }
+
+        th span {
+            white-space: nowrap;
+        }
+
+        tbody > tr {
+            transition: background-color $transition-duration $transition-timing;
+        }
+
+        tbody > tr:hover {
+            background: $color-slate-50;
+        }
+
         td {
-            padding: 0.75rem;
+            padding: 0.85rem 0.9rem;
             vertical-align: top;
+            word-break: break-word;
         }
 
         th {
@@ -207,13 +234,23 @@ $table-min-width: 58rem;
             color: $color-slate-900;
             font-weight: 500;
         }
+
+        tbody > tr + tr {
+            border-top: 1px solid $color-slate-200;
+        }
+
+        td:last-child,
+        th:last-child {
+            width: 1%;
+            white-space: nowrap;
+        }
     }
 
     &__table-actions {
         align-items: center;
         display: flex;
-        flex-wrap: wrap;
-        gap: 0.75rem;
+        flex-wrap: nowrap;
+        gap: 0.5rem;
     }
 
     &__history-actions {
@@ -284,6 +321,12 @@ $table-min-width: 58rem;
 
         &__grid {
             grid-template-columns: minmax(0, 1fr) minmax(20rem, 22rem);
+        }
+    }
+
+    @include respond-up($fullhd-breakpoint) {
+        &__shell {
+            max-width: 120rem;
         }
     }
 
