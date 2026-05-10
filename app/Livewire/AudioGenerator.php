@@ -12,6 +12,7 @@ use App\Services\GeminiVoiceService;
 use App\Services\PromptTemplateService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\Rule;
+use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 use Throwable;
@@ -55,6 +56,7 @@ class AudioGenerator extends Component
 
     public ?string $successMessage = null;
 
+    #[Locked]
     public ?int $audioGenerationId = null;
 
     /** @var list<array<string, mixed>> */
@@ -64,6 +66,7 @@ class AudioGenerator extends Component
     public array $promptTemplates = [];
 
     /** @var array{title: string, master_prompt: string, prompt_text: string, language_label: string, tts_voice_label: string}|null */
+    #[Locked]
     public ?array $selectedTemplate = null;
 
     /**

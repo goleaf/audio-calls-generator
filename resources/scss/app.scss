@@ -4,6 +4,26 @@ $compact-breakpoint: 30rem;
 $sm-breakpoint: 40rem;
 $lg-breakpoint: 64rem;
 $xl-breakpoint: 80rem;
+$color-white: #fff;
+$color-slate-50: #f8fafc;
+$color-slate-200: #e2e8f0;
+$color-slate-500: #64748b;
+$color-slate-600: #475569;
+$color-slate-900: #0f172a;
+$table-min-width: 58rem;
+
+@mixin respond-up($breakpoint) {
+    @media (min-width: $breakpoint) {
+        @content;
+    }
+}
+
+@mixin interactive-transition {
+    transition-duration: $transition-duration;
+    transition-property: background-color, border-color, color, opacity;
+    transition-timing-function: $transition-timing;
+    -webkit-tap-highlight-color: transparent;
+}
 
 .audio-generator {
     min-height: 100vh;
@@ -23,10 +43,7 @@ $xl-breakpoint: 80rem;
     textarea,
     button,
     a {
-        transition-duration: $transition-duration;
-        transition-property: background-color, border-color, color, opacity;
-        transition-timing-function: $transition-timing;
-        -webkit-tap-highlight-color: transparent;
+        @include interactive-transition;
     }
 
     select,
@@ -113,7 +130,7 @@ $xl-breakpoint: 80rem;
         animation: audio-generator-spin 700ms linear infinite;
         border: 2px solid rgb(255 255 255 / 35%);
         border-radius: 9999px;
-        border-top-color: #fff;
+        border-top-color: $color-white;
         display: inline-block;
         flex: 0 0 auto;
         height: 1rem;
@@ -122,13 +139,13 @@ $xl-breakpoint: 80rem;
 
     &__button-spinner--dark {
         border-color: rgb(15 23 42 / 18%);
-        border-top-color: #0f172a;
+        border-top-color: $color-slate-900;
     }
 
     &__loading-card {
         align-self: stretch;
-        background: #f8fafc;
-        border: 1px solid #e2e8f0;
+        background: $color-slate-50;
+        border: 1px solid $color-slate-200;
         border-radius: 0.5rem;
         display: none;
         min-height: 2.75rem;
@@ -137,10 +154,10 @@ $xl-breakpoint: 80rem;
 
     &__loading-icon {
         align-items: center;
-        background: #fff;
-        border: 1px solid #e2e8f0;
+        background: $color-white;
+        border: 1px solid $color-slate-200;
         border-radius: 9999px;
-        color: #475569;
+        color: $color-slate-600;
         display: inline-flex;
         flex: 0 0 auto;
         height: 1.75rem;
@@ -148,12 +165,63 @@ $xl-breakpoint: 80rem;
         width: 1.75rem;
     }
 
+    &__table-scroll {
+        border-bottom: 1px solid $color-slate-200;
+        border-top: 1px solid $color-slate-200;
+        overflow-x: auto;
+    }
+
+    &__table {
+        font-size: 0.875rem;
+        min-width: $table-min-width;
+        text-align: left;
+        width: 100%;
+
+        thead {
+            border-bottom: 1px solid $color-slate-200;
+            color: $color-slate-500;
+            font-size: 0.75rem;
+            letter-spacing: 0.025em;
+            text-transform: uppercase;
+        }
+
+        tbody > tr + tr {
+            border-top: 1px solid $color-slate-200;
+        }
+
+        th,
+        td {
+            padding: 0.75rem;
+            vertical-align: top;
+        }
+
+        th {
+            font-weight: 500;
+        }
+
+        td {
+            color: $color-slate-600;
+        }
+
+        td:first-child {
+            color: $color-slate-900;
+            font-weight: 500;
+        }
+    }
+
+    &__table-actions {
+        align-items: center;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+
     &__history-actions {
         flex-wrap: wrap;
         justify-content: flex-end;
     }
 
-    @media (min-width: $compact-breakpoint) {
+    @include respond-up($compact-breakpoint) {
         &__label-row {
             align-items: center;
             flex-direction: row;
@@ -174,7 +242,7 @@ $xl-breakpoint: 80rem;
         }
     }
 
-    @media (min-width: $sm-breakpoint) {
+    @include respond-up($sm-breakpoint) {
         &__shell {
             padding: 1.5rem 1rem 2rem;
         }
@@ -190,7 +258,7 @@ $xl-breakpoint: 80rem;
         }
     }
 
-    @media (min-width: $lg-breakpoint) {
+    @include respond-up($lg-breakpoint) {
         &__shell {
             padding-bottom: 2rem;
             padding-top: 2rem;
@@ -209,7 +277,7 @@ $xl-breakpoint: 80rem;
         }
     }
 
-    @media (min-width: $xl-breakpoint) {
+    @include respond-up($xl-breakpoint) {
         &__shell {
             max-width: 80rem;
         }

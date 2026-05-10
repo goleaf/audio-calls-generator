@@ -12,13 +12,13 @@
                         <input
                             id="templateTitle"
                             type="text"
-                            wire:model="title"
+                            wire:model="form.title"
                             maxlength="120"
                             class="min-h-11 w-full rounded-md border border-slate-300 px-3 py-2 text-sm text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
                             placeholder="Warm welcome"
                         >
 
-                        @error('title')
+                        @error('form.title')
                             <p class="text-sm text-red-600" wire:transition>{{ $message }}</p>
                         @enderror
                     </div>
@@ -31,10 +31,10 @@
 
                         <select
                             id="selectedLanguageCode"
-                            wire:model="selectedLanguageCode"
+                            wire:model="form.selectedLanguageCode"
                             class="min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
                         >
-                            @foreach ($languageGroups as $readiness => $languages)
+                            @foreach ($this->languageGroups as $readiness => $languages)
                                 <optgroup label="{{ $readiness }}">
                                     @foreach ($languages as $language)
                                         <option value="{{ $language['code'] }}">{{ $language['label'] }}</option>
@@ -43,7 +43,7 @@
                             @endforeach
                         </select>
 
-                        @error('selectedLanguageCode')
+                        @error('form.selectedLanguageCode')
                             <p class="text-sm text-red-600" wire:transition>{{ $message }}</p>
                         @enderror
                     </div>
@@ -57,16 +57,16 @@
 
                             <select
                                 id="selectedVoiceGender"
-                                wire:model="selectedVoiceGender"
+                                wire:model="form.selectedVoiceGender"
                                 wire:change="selectVoiceGender($event.target.value)"
                                 class="min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
                             >
-                                @foreach ($voiceGenders as $gender)
+                                @foreach ($this->voiceGenders as $gender)
                                     <option value="{{ $gender }}">{{ $gender }}</option>
                                 @endforeach
                             </select>
 
-                            @error('selectedVoiceGender')
+                            @error('form.selectedVoiceGender')
                                 <p class="text-sm text-red-600" wire:transition>{{ $message }}</p>
                             @enderror
                         </div>
@@ -79,16 +79,16 @@
 
                             <select
                                 id="selectedVoice"
-                                wire:key="voice-generator-{{ $selectedVoiceGender }}"
-                                wire:model="selectedVoice"
+                                wire:key="voice-generator-{{ $form->selectedVoiceGender }}"
+                                wire:model="form.selectedVoice"
                                 class="min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
                             >
-                                @foreach ($voiceGenerators as $generator)
+                                @foreach ($this->voiceGenerators as $generator)
                                     <option value="{{ $generator['name'] }}">{{ $generator['name'] }}</option>
                                 @endforeach
                             </select>
 
-                            @error('selectedVoice')
+                            @error('form.selectedVoice')
                                 <p class="text-sm text-red-600" wire:transition>{{ $message }}</p>
                             @enderror
                         </div>
@@ -100,19 +100,19 @@
                                 <x-icon name="message-square-text" class="size-4 text-slate-500" />
                                 <span>Master prompt</span>
                             </label>
-                            <span class="text-xs text-slate-500">{{ mb_strlen($masterPrompt) }} / 2000</span>
+                            <span class="text-xs text-slate-500">{{ mb_strlen($form->masterPrompt) }} / 2000</span>
                         </div>
 
                         <textarea
                             id="masterPrompt"
-                            wire:model="masterPrompt"
+                            wire:model="form.masterPrompt"
                             rows="5"
                             maxlength="2000"
                             class="w-full resize-y rounded-md border border-slate-300 px-3 py-2 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
                             placeholder="Write the reusable instruction for Gemini."
                         ></textarea>
 
-                        @error('masterPrompt')
+                        @error('form.masterPrompt')
                             <p class="text-sm text-red-600" wire:transition>{{ $message }}</p>
                         @enderror
                     </div>
@@ -123,19 +123,19 @@
                                 <x-icon name="file-text" class="size-4 text-slate-500" />
                                 <span>Prompt text</span>
                             </label>
-                            <span class="text-xs text-slate-500">{{ mb_strlen($promptText) }} / 5000</span>
+                            <span class="text-xs text-slate-500">{{ mb_strlen($form->promptText) }} / 5000</span>
                         </div>
 
                         <textarea
                             id="promptText"
-                            wire:model="promptText"
+                            wire:model="form.promptText"
                             rows="12"
                             maxlength="5000"
                             class="w-full resize-y rounded-md border border-slate-300 px-3 py-2 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
                             placeholder="Write the reusable prompt text."
                         ></textarea>
 
-                        @error('promptText')
+                        @error('form.promptText')
                             <p class="text-sm text-red-600" wire:transition>{{ $message }}</p>
                         @enderror
                     </div>
@@ -191,38 +191,38 @@
                     <span>Prompt templates</span>
                 </h2>
 
-                <div class="overflow-x-auto border-y border-slate-200">
-                    <table class="w-full min-w-[58rem] text-left text-sm">
-                        <thead class="border-b border-slate-200 text-xs uppercase tracking-wide text-slate-500">
+                <div class="audio-generator__table-scroll">
+                    <table class="audio-generator__table">
+                        <thead>
                             <tr>
-                                <th scope="col" class="px-3 py-3 font-medium">Title</th>
-                                <th scope="col" class="px-3 py-3 font-medium">Master prompt</th>
-                                <th scope="col" class="px-3 py-3 font-medium">Prompt text</th>
-                                <th scope="col" class="px-3 py-3 font-medium">Language</th>
-                                <th scope="col" class="px-3 py-3 font-medium">Voice gender</th>
-                                <th scope="col" class="px-3 py-3 font-medium">Voice generator</th>
-                                <th scope="col" class="px-3 py-3 font-medium">Actions</th>
+                                <th scope="col">Title</th>
+                                <th scope="col">Master prompt</th>
+                                <th scope="col">Prompt text</th>
+                                <th scope="col">Language</th>
+                                <th scope="col">Voice gender</th>
+                                <th scope="col">Voice generator</th>
+                                <th scope="col">Actions</th>
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-slate-200">
-                            @forelse ($promptTemplates as $template)
-                                <tr wire:key="prompt-template-{{ $template['id'] }}" class="align-top">
-                                    <td class="px-3 py-3 font-medium text-slate-900">
+                        <tbody>
+                            @forelse ($this->promptTemplates as $template)
+                                <tr wire:key="prompt-template-{{ $template['id'] }}">
+                                    <td>
                                         <span class="line-clamp-2 break-words">{{ $template['title'] }}</span>
                                     </td>
-                                    <td class="px-3 py-3 text-slate-600">
+                                    <td>
                                         <span class="line-clamp-3 break-words">{{ $template['master_prompt'] }}</span>
                                     </td>
-                                    <td class="px-3 py-3 text-slate-600">
+                                    <td>
                                         <span class="line-clamp-3 break-words">{{ $template['prompt_text'] }}</span>
                                     </td>
-                                    <td class="px-3 py-3 text-slate-600">
+                                    <td>
                                         <span class="line-clamp-2 break-words">{{ $template['language_label'] }}</span>
                                     </td>
-                                    <td class="px-3 py-3 text-slate-600">{{ $template['tts_voice_gender'] }}</td>
-                                    <td class="px-3 py-3 text-slate-600">{{ $template['tts_voice_label'] }}</td>
-                                    <td class="px-3 py-3">
-                                        <div class="flex flex-wrap items-center gap-3">
+                                    <td>{{ $template['tts_voice_gender'] }}</td>
+                                    <td>{{ $template['tts_voice_label'] }}</td>
+                                    <td>
+                                        <div class="audio-generator__table-actions">
                                             <button
                                                 type="button"
                                                 wire:click="edit({{ $template['id'] }})"
@@ -247,7 +247,7 @@
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="7" class="px-3 py-4 text-sm text-slate-500">No templates yet.</td>
+                                    <td colspan="7">No templates yet.</td>
                                 </tr>
                             @endforelse
                         </tbody>

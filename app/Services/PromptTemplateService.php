@@ -27,19 +27,7 @@ class PromptTemplateService
             ->recentList()
             ->limit($limit)
             ->get()
-            ->map(fn (PromptTemplate $template): array => [
-                'id' => $template->id,
-                'title' => $template->title,
-                'master_prompt' => $template->master_prompt,
-                'prompt_text' => $template->prompt_text,
-                'language_code' => $template->language_code,
-                'language_name' => $template->language_name,
-                'language_readiness' => $template->language_readiness,
-                'language_label' => $this->languageLabel($template->language_code, $template->language_name),
-                'tts_voice' => $template->tts_voice,
-                'tts_voice_gender' => $template->tts_voice_gender,
-                'tts_voice_label' => $template->tts_voice_label,
-            ])
+            ->map(fn (PromptTemplate $template): array => $this->toListItem($template))
             ->all();
     }
 
@@ -51,34 +39,10 @@ class PromptTemplateService
     public function options(int $limit = self::DEFAULT_LIMIT): array
     {
         return PromptTemplate::query()
-            ->select([
-                'id',
-                'title',
-                'master_prompt',
-                'prompt_text',
-                'language_code',
-                'language_name',
-                'language_readiness',
-                'tts_voice',
-                'tts_voice_gender',
-                'tts_voice_label',
-            ])
-            ->latest('id')
+            ->recentList()
             ->limit($limit)
             ->get()
-            ->map(fn (PromptTemplate $template): array => [
-                'id' => $template->id,
-                'title' => $template->title,
-                'master_prompt' => $template->master_prompt,
-                'prompt_text' => $template->prompt_text,
-                'language_code' => $template->language_code,
-                'language_name' => $template->language_name,
-                'language_readiness' => $template->language_readiness,
-                'language_label' => $this->languageLabel($template->language_code, $template->language_name),
-                'tts_voice' => $template->tts_voice,
-                'tts_voice_gender' => $template->tts_voice_gender,
-                'tts_voice_label' => $template->tts_voice_label,
-            ])
+            ->map(fn (PromptTemplate $template): array => $this->toListItem($template))
             ->all();
     }
 
@@ -142,6 +106,28 @@ class PromptTemplateService
         }
 
         return "{$name} - {$code}";
+    }
+
+    /**
+     * Convert a prompt template model into the stable Livewire list shape.
+     *
+     * @return array{id: int, title: string, master_prompt: string|null, prompt_text: string, language_code: string|null, language_name: string|null, language_readiness: string|null, language_label: string|null, tts_voice: string|null, tts_voice_gender: string|null, tts_voice_label: string|null}
+     */
+    private function toListItem(PromptTemplate $template): array
+    {
+        return [
+            'id' => $template->id,
+            'title' => $template->title,
+            'master_prompt' => $template->master_prompt,
+            'prompt_text' => $template->prompt_text,
+            'language_code' => $template->language_code,
+            'language_name' => $template->language_name,
+            'language_readiness' => $template->language_readiness,
+            'language_label' => $this->languageLabel($template->language_code, $template->language_name),
+            'tts_voice' => $template->tts_voice,
+            'tts_voice_gender' => $template->tts_voice_gender,
+            'tts_voice_label' => $template->tts_voice_label,
+        ];
     }
 
     /**
