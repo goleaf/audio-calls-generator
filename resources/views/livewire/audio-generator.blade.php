@@ -1,10 +1,10 @@
-<div class="audio-generator min-h-screen bg-white text-slate-950">
-    <main class="mx-auto w-full max-w-6xl px-4 py-8">
-        <div class="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_20rem]">
-            <section class="space-y-8">
+<div class="audio-generator bg-white text-slate-950">
+    <main class="audio-generator__shell">
+        <div class="audio-generator__grid">
+            <section class="audio-generator__main space-y-7 sm:space-y-8">
                 <form wire:submit="saveMasterPrompt" class="space-y-4">
                     <div class="space-y-2">
-                        <div class="flex items-center justify-between gap-4">
+                        <div class="audio-generator__label-row">
                             <label for="masterPrompt" class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
                                 <x-icon name="notebook-pen" class="size-4 text-slate-500" />
                                 <span>Master prompt</span>
@@ -26,12 +26,12 @@
                         @enderror
                     </div>
 
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div class="audio-generator__actions">
                         <button
                             type="submit"
                             wire:loading.attr="disabled"
                             wire:target="saveMasterPrompt"
-                            class="inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                            class="audio-generator__button inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             <span wire:loading.remove wire:target="saveMasterPrompt" class="inline-flex items-center gap-2">
                                 <x-icon name="save" />
@@ -60,7 +60,7 @@
                 @endif
 
                 <form wire:submit="generate" class="space-y-4">
-                    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div class="audio-generator__field-row">
                         <div class="space-y-2">
                             <label for="selectedVoiceGender" class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
                                 <x-icon name="users" class="size-4 text-slate-500" />
@@ -107,7 +107,7 @@
                         </div>
                     </div>
 
-                    <div class="flex items-center justify-between gap-4">
+                    <div class="audio-generator__label-row">
                         <label for="text" class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
                             <x-icon name="file-text" class="size-4 text-slate-500" />
                             <span>Text</span>
@@ -128,12 +128,12 @@
                         <p class="text-sm text-red-600" wire:transition>{{ $message }}</p>
                     @enderror
 
-                    <div class="flex flex-col gap-2 sm:flex-row sm:items-center">
+                    <div class="audio-generator__actions">
                         <button
                             type="submit"
                             wire:loading.attr="disabled"
                             wire:target="generate"
-                            class="inline-flex min-h-11 items-center justify-center rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+                            class="audio-generator__button inline-flex min-h-11 items-center justify-center rounded-md bg-slate-950 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
                         >
                             <span wire:loading.remove wire:target="generate" class="inline-flex items-center gap-2">
                                 <x-icon name="audio-lines" />
@@ -154,7 +154,7 @@
 
                 @if ($wavUrl)
                     <section class="space-y-2" wire:transition>
-                        <div class="flex items-center justify-between gap-4">
+                        <div class="audio-generator__label-row">
                             <h2 class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
                                 <x-icon name="volume" class="text-slate-500" />
                                 <span>WAV</span>
@@ -172,7 +172,7 @@
                 @endif
             </section>
 
-            <aside class="space-y-3 lg:sticky lg:top-8 lg:self-start">
+            <aside class="audio-generator__history space-y-3">
                 <h2 class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
                     <x-icon name="history" class="text-slate-500" />
                     <span>Previous prompts</span>
@@ -184,13 +184,13 @@
                     <div class="divide-y divide-slate-200 border-y border-slate-200">
                         @foreach ($savedGenerations as $generation)
                             <div wire:key="saved-generation-{{ $generation['id'] }}" class="space-y-3 py-3">
-                                <div class="flex items-center justify-between gap-3">
+                                <div class="flex flex-col gap-2 min-[30rem]:flex-row min-[30rem]:items-center min-[30rem]:justify-between">
                                     <span class="text-xs text-slate-500">{{ str_replace('_', ' ', $generation['status']) }}</span>
-                                    <div class="flex items-center gap-3">
+                                    <div class="audio-generator__history-actions flex items-center gap-3">
                                         <button
                                             type="button"
                                             wire:click="usePrompt({{ $generation['id'] }})"
-                                            class="inline-flex items-center gap-1.5 text-sm text-slate-700 underline underline-offset-4 hover:text-slate-950"
+                                            class="inline-flex min-h-8 items-center gap-1.5 text-sm text-slate-700 underline underline-offset-4 hover:text-slate-950 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
                                         >
                                             <x-icon name="play" class="size-3.5" />
                                             <span>Use</span>
@@ -201,7 +201,7 @@
                                             wire:click="removePrompt({{ $generation['id'] }})"
                                             wire:loading.attr="disabled"
                                             wire:target="removePrompt({{ $generation['id'] }})"
-                                            class="inline-flex items-center gap-1.5 text-sm text-red-600 underline underline-offset-4 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-60"
+                                            class="inline-flex min-h-8 items-center gap-1.5 text-sm text-red-600 underline underline-offset-4 hover:text-red-700 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-700 disabled:cursor-not-allowed disabled:opacity-60"
                                         >
                                             <x-icon name="trash" class="size-3.5" />
                                             <span>Remove</span>
