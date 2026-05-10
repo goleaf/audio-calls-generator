@@ -41,6 +41,45 @@ class PromptTemplateFormPage extends Component
     #[Locked]
     public ?int $editingTemplateId = null;
 
+    protected EditPromptTemplateAction $editPromptTemplate;
+
+    protected ListPromptTemplateLanguagesAction $listPromptTemplateLanguages;
+
+    protected ListPromptTemplateVoiceGendersAction $listPromptTemplateVoiceGenders;
+
+    protected ListPromptTemplateVoiceGeneratorsAction $listPromptTemplateVoiceGenerators;
+
+    protected PromptTemplateRules $promptTemplateRules;
+
+    protected ResetPromptTemplateFormAction $resetPromptTemplateForm;
+
+    protected SavePromptTemplateAction $savePromptTemplate;
+
+    protected SelectPromptTemplateVoiceGenderAction $selectPromptTemplateVoiceGender;
+
+    /**
+     * Hydrate action and rule dependencies for each Livewire request.
+     */
+    public function boot(
+        EditPromptTemplateAction $editPromptTemplate,
+        ListPromptTemplateLanguagesAction $listPromptTemplateLanguages,
+        ListPromptTemplateVoiceGendersAction $listPromptTemplateVoiceGenders,
+        ListPromptTemplateVoiceGeneratorsAction $listPromptTemplateVoiceGenerators,
+        PromptTemplateRules $promptTemplateRules,
+        ResetPromptTemplateFormAction $resetPromptTemplateForm,
+        SavePromptTemplateAction $savePromptTemplate,
+        SelectPromptTemplateVoiceGenderAction $selectPromptTemplateVoiceGender,
+    ): void {
+        $this->editPromptTemplate = $editPromptTemplate;
+        $this->listPromptTemplateLanguages = $listPromptTemplateLanguages;
+        $this->listPromptTemplateVoiceGenders = $listPromptTemplateVoiceGenders;
+        $this->listPromptTemplateVoiceGenerators = $listPromptTemplateVoiceGenerators;
+        $this->promptTemplateRules = $promptTemplateRules;
+        $this->resetPromptTemplateForm = $resetPromptTemplateForm;
+        $this->savePromptTemplate = $savePromptTemplate;
+        $this->selectPromptTemplateVoiceGender = $selectPromptTemplateVoiceGender;
+    }
+
     /**
      * Load defaults for create mode or saved values for edit mode.
      */
@@ -52,7 +91,7 @@ class PromptTemplateFormPage extends Component
             return;
         }
 
-        $state = app(EditPromptTemplateAction::class)->handle(new EditPromptTemplateRequest($promptTemplate->id));
+        $state = $this->editPromptTemplate->handle(new EditPromptTemplateRequest($promptTemplate->id));
 
         if ($state === null) {
             $this->errorMessage = self::ERROR_TEMPLATE_NOT_FOUND;
@@ -70,12 +109,11 @@ class PromptTemplateFormPage extends Component
      */
     public function save(): void
     {
-        $ruleSet = app(PromptTemplateRules::class);
         $validated = $this->form->validate(
-            $ruleSet->rules($this->form->selectedVoiceGender),
-            $ruleSet->messages(),
+            $this->promptTemplateRules->rules($this->form->selectedVoiceGender),
+            $this->promptTemplateRules->messages(),
         );
-        $template = app(SavePromptTemplateAction::class)->handle(new SavePromptTemplateRequest(
+        $template = $this->savePromptTemplate->handle(new SavePromptTemplateRequest(
             $this->editingTemplateId,
             $validated['title'],
             $validated['masterPrompt'],
@@ -107,7 +145,7 @@ class PromptTemplateFormPage extends Component
     public function selectVoiceGender(string $gender): void
     {
         $this->form->fillFromState(
-            app(SelectPromptTemplateVoiceGenderAction::class)->handle(new SelectPromptTemplateVoiceGenderRequest($gender)),
+            $this->selectPromptTemplateVoiceGender->handle(new SelectPromptTemplateVoiceGenderRequest($gender)),
         );
         $this->resetValidation('form.selectedVoice');
     }
@@ -128,7 +166,7 @@ class PromptTemplateFormPage extends Component
     #[Computed]
     public function languageGroups(): array
     {
-        return app(ListPromptTemplateLanguagesAction::class)->handle(new ListPromptTemplateLanguagesRequest);
+        return $this->listPromptTemplateLanguages->handle(new ListPromptTemplateLanguagesRequest);
     }
 
     /**
@@ -139,7 +177,7 @@ class PromptTemplateFormPage extends Component
     #[Computed]
     public function voiceGenders(): array
     {
-        return app(ListPromptTemplateVoiceGendersAction::class)->handle(new ListPromptTemplateVoiceGendersRequest);
+        return $this->listPromptTemplateVoiceGenders->handle(new ListPromptTemplateVoiceGendersRequest);
     }
 
     /**
@@ -150,7 +188,7 @@ class PromptTemplateFormPage extends Component
     #[Computed]
     public function voiceGenerators(): array
     {
-        return app(ListPromptTemplateVoiceGeneratorsAction::class)->handle(new ListPromptTemplateVoiceGeneratorsRequest(
+        return $this->listPromptTemplateVoiceGenerators->handle(new ListPromptTemplateVoiceGeneratorsRequest(
             $this->form->selectedVoiceGender,
         ));
     }
@@ -162,7 +200,7 @@ class PromptTemplateFormPage extends Component
     {
         $this->editingTemplateId = null;
         $this->form->fillFromState(
-            app(ResetPromptTemplateFormAction::class)->handle(new ResetPromptTemplateFormRequest),
+            $this->resetPromptTemplateForm->handle(new ResetPromptTemplateFormRequest),
         );
         $this->resetValidation();
     }

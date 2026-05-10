@@ -36,6 +36,18 @@ test('application does not use livewire volt', function () {
     expect($matches)->toBe([]);
 });
 
+test('application source resolves dependencies without service locator helpers', function () {
+    $matches = collect([
+        app_path(),
+        database_path('seeders'),
+    ])
+        ->flatMap(fn (string $path): array => scanPhpFilesForServiceLocatorHelper($path))
+        ->values()
+        ->all();
+
+    expect($matches)->toBe([]);
+});
+
 /**
  * Return all autoloadable application class names from the app directory.
  *
@@ -111,6 +123,27 @@ function scanTextFilesForVolt(string $path): array
 }
 
 /**
+ * Scan a file or directory tree for service locator helper usage.
+ *
+ * @return list<string>
+ */
+function scanPhpFilesForServiceLocatorHelper(string $path): array
+{
+    if (is_file($path)) {
+        return fileContainsServiceLocatorHelper($path) ? [$path] : [];
+    }
+
+    $iterator = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($path));
+
+    return collect($iterator)
+        ->filter(fn (SplFileInfo $file): bool => $file->isFile() && $file->getExtension() === 'php')
+        ->map(fn (SplFileInfo $file): string => $file->getPathname())
+        ->filter(fn (string $file): bool => fileContainsServiceLocatorHelper($file))
+        ->values()
+        ->all();
+}
+
+/**
  * Check whether a text file contains a Livewire Volt reference.
  */
 function fileContainsVolt(string $path): bool
@@ -122,4 +155,18 @@ function fileContainsVolt(string $path): bool
     }
 
     return preg_match('/Livewire\\\\Volt|@volt|livewire:volt/i', $contents) === 1;
+}
+
+/**
+ * Check whether a source file still pulls dependencies from the container inline.
+ */
+function fileContainsServiceLocatorHelper(string $path): bool
+{
+    $contents = file_get_contents($path);
+
+    if ($contents === false) {
+        return false;
+    }
+
+    return preg_match('/\bapp\s*\(/', $contents) === 1;
 }

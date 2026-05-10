@@ -24,6 +24,21 @@ class PromptTemplateIndex extends Component
 
     public ?string $errorMessage = null;
 
+    protected ListPromptTemplatesAction $listPromptTemplates;
+
+    protected RemovePromptTemplateAction $removePromptTemplate;
+
+    /**
+     * Hydrate action dependencies for each Livewire request.
+     */
+    public function boot(
+        ListPromptTemplatesAction $listPromptTemplates,
+        RemovePromptTemplateAction $removePromptTemplate,
+    ): void {
+        $this->listPromptTemplates = $listPromptTemplates;
+        $this->removePromptTemplate = $removePromptTemplate;
+    }
+
     /**
      * Render the prompt templates index page.
      */
@@ -37,7 +52,7 @@ class PromptTemplateIndex extends Component
      */
     public function remove(int $templateId): void
     {
-        if (! app(RemovePromptTemplateAction::class)->handle(new RemovePromptTemplateRequest($templateId))) {
+        if (! $this->removePromptTemplate->handle(new RemovePromptTemplateRequest($templateId))) {
             $this->successMessage = null;
             $this->errorMessage = self::ERROR_TEMPLATE_NOT_FOUND;
 
@@ -56,6 +71,6 @@ class PromptTemplateIndex extends Component
     #[Computed]
     public function promptTemplates(): array
     {
-        return app(ListPromptTemplatesAction::class)->handle(new ListPromptTemplatesRequest);
+        return $this->listPromptTemplates->handle(new ListPromptTemplatesRequest);
     }
 }

@@ -12,11 +12,8 @@ class PromptTemplateSeeder extends Seeder
     /**
      * Run the database seeds.
      */
-    public function run(): void
+    public function run(GeminiLanguageService $languages, GeminiVoiceService $voices): void
     {
-        $languages = app(GeminiLanguageService::class);
-        $voices = app(GeminiVoiceService::class);
-
         foreach ($this->templates() as $template) {
             $language = $languages->find($template['language_code']) ?? $languages->default();
             $voice = $voices->find($template['voice']) ?? $voices->default();

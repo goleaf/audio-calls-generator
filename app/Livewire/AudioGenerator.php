@@ -70,6 +70,37 @@ class AudioGenerator extends Component
     #[Locked]
     public ?array $selectedTemplate = null;
 
+    protected GenerateAudioAction $generateAudio;
+
+    protected GenerateAudioRules $generateAudioRules;
+
+    protected LoadAudioGeneratorDataAction $loadAudioGeneratorData;
+
+    protected RemovePreviousPromptAction $removePreviousPrompt;
+
+    protected UsePreviousPromptAction $usePreviousPrompt;
+
+    protected UsePromptTemplateAction $usePromptTemplate;
+
+    /**
+     * Hydrate non-serializable dependencies for each Livewire request.
+     */
+    public function boot(
+        GenerateAudioAction $generateAudio,
+        GenerateAudioRules $generateAudioRules,
+        LoadAudioGeneratorDataAction $loadAudioGeneratorData,
+        RemovePreviousPromptAction $removePreviousPrompt,
+        UsePreviousPromptAction $usePreviousPrompt,
+        UsePromptTemplateAction $usePromptTemplate,
+    ): void {
+        $this->generateAudio = $generateAudio;
+        $this->generateAudioRules = $generateAudioRules;
+        $this->loadAudioGeneratorData = $loadAudioGeneratorData;
+        $this->removePreviousPrompt = $removePreviousPrompt;
+        $this->usePreviousPrompt = $usePreviousPrompt;
+        $this->usePromptTemplate = $usePromptTemplate;
+    }
+
     /**
      * Initialize the form with reusable templates and recent generation history.
      */
@@ -83,10 +114,9 @@ class AudioGenerator extends Component
      */
     public function generate(): void
     {
-        $ruleSet = app(GenerateAudioRules::class);
-        $validated = $this->validate($ruleSet->rules(), $ruleSet->messages());
+        $validated = $this->validate($this->generateAudioRules->rules(), $this->generateAudioRules->messages());
         $this->resetAudioResults(keepGeneration: true);
-        $result = app(GenerateAudioAction::class)->handle(new GenerateAudioRequest(
+        $result = $this->generateAudio->handle(new GenerateAudioRequest(
             (int) $validated['selectedPromptTemplateId'],
             $this->audioGenerationId,
         ));
@@ -129,7 +159,7 @@ class AudioGenerator extends Component
      */
     public function usePrompt(int $generationId): void
     {
-        $state = app(UsePreviousPromptAction::class)->handle(new UsePreviousPromptRequest($generationId));
+        $state = $this->usePreviousPrompt->handle(new UsePreviousPromptRequest($generationId));
 
         if ($state === null) {
             return;
@@ -155,7 +185,7 @@ class AudioGenerator extends Component
             return;
         }
 
-        $template = app(UsePromptTemplateAction::class)->handle(new UsePromptTemplateRequest($id));
+        $template = $this->usePromptTemplate->handle(new UsePromptTemplateRequest($id));
 
         if ($template === null) {
             $this->selectedPromptTemplateId = '';
@@ -178,7 +208,7 @@ class AudioGenerator extends Component
      */
     public function removePrompt(int $generationId): void
     {
-        if (! app(RemovePreviousPromptAction::class)->handle(new RemovePreviousPromptRequest($generationId))) {
+        if (! $this->removePreviousPrompt->handle(new RemovePreviousPromptRequest($generationId))) {
             $this->successMessage = null;
             $this->errorMessage = self::ERROR_PROMPT_NOT_FOUND;
 
@@ -216,7 +246,7 @@ class AudioGenerator extends Component
      */
     private function loadGeneratorData(): void
     {
-        $data = app(LoadAudioGeneratorDataAction::class)->handle(new LoadAudioGeneratorDataRequest);
+        $data = $this->loadAudioGeneratorData->handle(new LoadAudioGeneratorDataRequest);
 
         $this->promptTemplates = $data['prompt_templates'];
         $this->savedGenerations = $data['saved_generations'];
