@@ -60,6 +60,33 @@
                 @endif
 
                 <form wire:submit="generate" class="space-y-4">
+                    <div class="space-y-2">
+                        <label for="selectedPromptTemplateId" class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
+                            <x-icon name="notebook-pen" class="size-4 text-slate-500" />
+                            <span>Prompt template</span>
+                        </label>
+
+                        <select
+                            id="selectedPromptTemplateId"
+                            wire:model="selectedPromptTemplateId"
+                            wire:change="usePromptTemplate($event.target.value)"
+                            class="min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
+                        >
+                            <option value="">Select a saved template</option>
+                            @foreach ($promptTemplates as $template)
+                                <option value="{{ $template['id'] }}">{{ $template['title'] }}</option>
+                            @endforeach
+                        </select>
+
+                        @if ($promptTemplates === [])
+                            <p class="text-sm text-slate-500">
+                                Create templates on the
+                                <a href="{{ route('audio.prompt-templates') }}" wire:navigate class="text-slate-700 underline underline-offset-4 hover:text-slate-950">Prompt templates</a>
+                                page.
+                            </p>
+                        @endif
+                    </div>
+
                     <div class="audio-generator__field-row">
                         <div class="space-y-2">
                             <label for="selectedVoiceGender" class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">

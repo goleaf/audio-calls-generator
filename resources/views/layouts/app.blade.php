@@ -18,6 +18,28 @@
         @livewireStyles
     </head>
     <body class="font-sans antialiased">
+        <nav class="border-b border-slate-200 bg-white text-slate-950">
+            <div class="mx-auto flex w-full max-w-7xl items-center gap-2 px-3 py-2 sm:px-4">
+                <a
+                    href="{{ route('audio.generator') }}"
+                    wire:navigate
+                    class="inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-sm font-medium {{ request()->routeIs('audio.generator') ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950' }}"
+                >
+                    <x-icon name="audio-lines" class="size-3.5" />
+                    <span>Audio generator</span>
+                </a>
+
+                <a
+                    href="{{ route('audio.prompt-templates') }}"
+                    wire:navigate
+                    class="inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-sm font-medium {{ request()->routeIs('audio.prompt-templates') ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950' }}"
+                >
+                    <x-icon name="notebook-pen" class="size-3.5" />
+                    <span>Prompt templates</span>
+                </a>
+            </div>
+        </nav>
+
         {{ $slot }}
 
         @livewireScripts

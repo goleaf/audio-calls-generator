@@ -5,6 +5,7 @@ use App\Livewire\AudioGenerator;
 use App\Models\AudioGeneration;
 use App\Models\AudioVoicePreference;
 use App\Models\MasterPrompt;
+use App\Models\PromptTemplate;
 use App\Services\GeminiAudioService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Storage;
@@ -15,7 +16,10 @@ uses(RefreshDatabase::class);
 test('audio generator page renders', function () {
     $this->get(route('audio.generator'))
         ->assertSuccessful()
+        ->assertSee('Prompt templates')
+        ->assertSee('Audio generator')
         ->assertSee('Master prompt')
+        ->assertSee('Prompt template')
         ->assertSee('Voice gender')
         ->assertSee('Voice generator')
         ->assertSee('Female')
@@ -42,6 +46,21 @@ test('audio generator page renders', function () {
         ->assertDontSee('Additional prompt')
         ->assertDontSee('Download WAV')
         ->assertDontSee('Creating script');
+});
+
+test('audio generator can load a saved prompt template into the text field', function () {
+    $template = PromptTemplate::factory()->create([
+        'title' => 'Follow up call',
+        'prompt_text' => 'Ask the caller if they need more help with their order.',
+    ]);
+
+    Livewire::test(AudioGenerator::class)
+        ->assertSet('promptTemplates.0.title', 'Follow up call')
+        ->assertSee('Follow up call')
+        ->call('usePromptTemplate', $template->id)
+        ->assertSet('selectedPromptTemplateId', (string) $template->id)
+        ->assertSet('text', 'Ask the caller if they need more help with their order.')
+        ->assertSet('successMessage', 'Prompt template has been loaded.');
 });
 
 test('voice generator names are filtered by selected gender', function () {

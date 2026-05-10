@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\AudioFileController;
 use App\Livewire\AudioGenerator;
+use App\Livewire\PromptTemplateManager;
 use Illuminate\Support\Facades\Route;
 
 Route::middleware('web')
@@ -13,4 +14,6 @@ Route::middleware('web')
             ->name('files.show');
 
         Route::livewire('/', AudioGenerator::class)->name('generator');
+
+        Route::livewire('/prompt-templates', PromptTemplateManager::class)->name('prompt-templates');
     });

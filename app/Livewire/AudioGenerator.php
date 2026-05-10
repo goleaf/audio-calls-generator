@@ -9,6 +9,7 @@ use App\Services\AudioVoicePreferenceService;
 use App\Services\GeminiAudioService;
 use App\Services\GeminiVoiceService;
 use App\Services\MasterPromptService;
+use App\Services\PromptTemplateService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Title;
@@ -28,13 +29,19 @@ class AudioGenerator extends Component
 
     private const SUCCESS_PROMPT_REMOVED = 'Prompt has been removed.';
 
+    private const SUCCESS_TEMPLATE_LOADED = 'Prompt template has been loaded.';
+
     private const ERROR_PROMPT_NOT_FOUND = 'Prompt was not found.';
+
+    private const ERROR_TEMPLATE_NOT_FOUND = 'Prompt template was not found.';
 
     private const ERROR_UNEXPECTED_GENERATION = 'Audio generation failed unexpectedly.';
 
     public string $masterPrompt = '';
 
     public string $text = '';
+
+    public string $selectedPromptTemplateId = '';
 
     public string $selectedVoiceGender = '';
 
@@ -53,6 +60,9 @@ class AudioGenerator extends Component
     /** @var list<array<string, mixed>> */
     public array $savedGenerations = [];
 
+    /** @var list<array{id: int, title: string}> */
+    public array $promptTemplates = [];
+
     /** @var list<string> */
     public array $voiceGenders = [];
 
@@ -69,6 +79,7 @@ class AudioGenerator extends Component
         $this->masterPrompt = app(MasterPromptService::class)->current();
         $this->voiceGenders = $voiceService->genders();
         $this->setSelectedVoice(app(AudioVoicePreferenceService::class)->current()['name']);
+        $this->loadPromptTemplates();
         $this->loadSavedGenerations();
     }
 
@@ -155,6 +166,37 @@ class AudioGenerator extends Component
         $this->wavUrl = $generation->audio_url;
         $this->errorMessage = null;
         $this->successMessage = self::SUCCESS_PROMPT_LOADED;
+    }
+
+    /**
+     * Load a reusable prompt template into the audio text field.
+     */
+    public function usePromptTemplate(int|string $templateId): void
+    {
+        $id = (int) $templateId;
+
+        if ($id < 1) {
+            $this->selectedPromptTemplateId = '';
+
+            return;
+        }
+
+        $template = app(PromptTemplateService::class)->find($id);
+
+        if ($template === null) {
+            $this->selectedPromptTemplateId = '';
+            $this->successMessage = null;
+            $this->errorMessage = self::ERROR_TEMPLATE_NOT_FOUND;
+
+            return;
+        }
+
+        $this->selectedPromptTemplateId = (string) $template->id;
+        $this->text = $template->prompt_text;
+        $this->wavPath = null;
+        $this->wavUrl = null;
+        $this->errorMessage = null;
+        $this->successMessage = self::SUCCESS_TEMPLATE_LOADED;
     }
 
     /**
@@ -308,6 +350,14 @@ class AudioGenerator extends Component
     private function loadSavedGenerations(?AudioGenerationHistoryService $history = null): void
     {
         $this->savedGenerations = ($history ?? app(AudioGenerationHistoryService::class))->recent();
+    }
+
+    /**
+     * Refresh the reusable prompt template selector.
+     */
+    private function loadPromptTemplates(?PromptTemplateService $templates = null): void
+    {
+        $this->promptTemplates = ($templates ?? app(PromptTemplateService::class))->options();
     }
 
     /**
