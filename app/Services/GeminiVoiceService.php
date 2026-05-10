@@ -31,7 +31,7 @@ class GeminiVoiceService
         ['name' => 'Alnilam', 'gender' => 'Male'],
         ['name' => 'Vindemiatrix', 'gender' => 'Female'],
         ['name' => 'Schedar', 'gender' => 'Male'],
-        ['name' => 'Sadachbia', 'gender' => 'Female'],
+        ['name' => 'Sadachbia', 'gender' => 'Male'],
         ['name' => 'Achird', 'gender' => 'Male'],
         ['name' => 'Sulafat', 'gender' => 'Female'],
         ['name' => 'Zubenelgenubi', 'gender' => 'Male'],
