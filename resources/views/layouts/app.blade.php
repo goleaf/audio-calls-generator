@@ -32,7 +32,7 @@
                 <a
                     href="{{ route('audio.prompt-templates') }}"
                     wire:navigate
-                    class="inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-sm font-medium {{ request()->routeIs('audio.prompt-templates') ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950' }}"
+                    class="inline-flex min-h-9 items-center gap-2 rounded-md px-3 text-sm font-medium {{ request()->routeIs('audio.prompt-templates*') ? 'bg-slate-950 text-white' : 'text-slate-600 hover:bg-slate-100 hover:text-slate-950' }}"
                 >
                     <x-icon name="notebook-pen" class="size-3.5" />
                     <span>Prompt templates</span>

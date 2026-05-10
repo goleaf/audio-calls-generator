@@ -1,6 +1,7 @@
 <?php
 
-use App\Livewire\PromptTemplateManager;
+use App\Livewire\PromptTemplateFormPage;
+use App\Livewire\PromptTemplateIndex;
 use App\Models\PromptTemplate;
 use Database\Seeders\PromptTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -8,7 +9,13 @@ use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
-test('prompt templates page renders full crud from the top menu', function () {
+test('prompt templates index page renders only the list from the top menu', function () {
+    $template = PromptTemplate::factory()->create([
+        'title' => 'Reusable reminder',
+        'master_prompt' => 'Speak clearly.',
+        'prompt_text' => 'Remind the caller about the appointment.',
+    ]);
+
     $this->get(route('audio.generator'))
         ->assertSuccessful()
         ->assertSee('Prompt templates');
@@ -17,6 +24,19 @@ test('prompt templates page renders full crud from the top menu', function () {
         ->assertSuccessful()
         ->assertSee('Prompt templates')
         ->assertSee('Audio generator')
+        ->assertSee('Create template')
+        ->assertSee('Actions')
+        ->assertSee($template->title)
+        ->assertDontSee('Template title')
+        ->assertDontSee('Save template');
+});
+
+test('prompt template create page renders only the form', function () {
+    $template = PromptTemplate::factory()->create(['title' => 'Existing table item']);
+
+    $this->get(route('audio.prompt-templates.create'))
+        ->assertSuccessful()
+        ->assertSee('Create prompt template')
         ->assertSee('Template title')
         ->assertSee('Master prompt')
         ->assertSee('Prompt text')
@@ -24,12 +44,36 @@ test('prompt templates page renders full crud from the top menu', function () {
         ->assertSee('Lithuanian (Lithuania) - lt-LT')
         ->assertSee('Voice gender')
         ->assertSee('Voice generator')
-        ->assertSee('Title')
-        ->assertSee('Actions');
+        ->assertSee('Save template')
+        ->assertDontSee('Actions')
+        ->assertDontSee($template->title);
+});
+
+test('prompt template edit page renders only the form with saved values', function () {
+    $template = PromptTemplate::factory()->create([
+        'title' => 'Editable template',
+        'master_prompt' => 'Speak like a calm assistant.',
+        'prompt_text' => 'Remind the caller about the appointment.',
+        'language_code' => 'en-US',
+        'language_name' => 'English (United States)',
+        'language_readiness' => 'GA',
+        'tts_voice' => 'Kore',
+        'tts_voice_gender' => 'Female',
+        'tts_voice_label' => 'Female - Kore',
+    ]);
+
+    $this->get(route('audio.prompt-templates.edit', $template))
+        ->assertSuccessful()
+        ->assertSee('Edit prompt template')
+        ->assertSee('Editable template')
+        ->assertSee('Update template')
+        ->assertSee('English (United States) - en-US')
+        ->assertDontSee('Create template')
+        ->assertDontSee('Actions');
 });
 
 test('it creates a prompt template with all generation settings', function () {
-    Livewire::test(PromptTemplateManager::class)
+    Livewire::test(PromptTemplateFormPage::class)
         ->set('form.title', 'Warm welcome')
         ->set('form.masterPrompt', 'Speak with a warm support tone.')
         ->set('form.selectedLanguageCode', 'lt-LT')
@@ -38,14 +82,7 @@ test('it creates a prompt template with all generation settings', function () {
         ->set('form.promptText', 'Welcome the caller with a calm and clear greeting.')
         ->call('save')
         ->assertHasNoErrors()
-        ->assertSet('form.title', '')
-        ->assertSet('form.masterPrompt', '')
-        ->assertSet('form.promptText', '')
-        ->assertSet('editingTemplateId', null)
-        ->assertSet('successMessage', 'Prompt template has been saved.')
-        ->assertSee('Warm welcome')
-        ->assertSee('Male - Puck')
-        ->assertSee('Lithuanian (Lithuania) - lt-LT');
+        ->assertRedirectToRoute('audio.prompt-templates');
 
     $this->assertDatabaseHas('prompt_templates', [
         'title' => 'Warm welcome',
@@ -61,7 +98,7 @@ test('it creates a prompt template with all generation settings', function () {
 });
 
 test('voice generator names are filtered by selected template gender', function () {
-    Livewire::test(PromptTemplateManager::class)
+    Livewire::test(PromptTemplateFormPage::class)
         ->assertSet('form.selectedVoiceGender', 'Female')
         ->assertSet('form.selectedVoice', 'Kore')
         ->assertSeeHtml('<option value="Kore">Kore</option>')
@@ -86,8 +123,7 @@ test('it updates a prompt template', function () {
         'tts_voice_label' => 'Female - Kore',
     ]);
 
-    Livewire::test(PromptTemplateManager::class)
-        ->call('edit', $template->id)
+    Livewire::test(PromptTemplateFormPage::class, ['promptTemplate' => $template])
         ->assertSet('editingTemplateId', $template->id)
         ->assertSet('form.title', 'Short reminder')
         ->assertSet('form.masterPrompt', 'Speak like a calm assistant.')
@@ -103,9 +139,7 @@ test('it updates a prompt template', function () {
         ->set('form.promptText', 'Tell the caller their appointment starts at nine.')
         ->call('save')
         ->assertHasNoErrors()
-        ->assertSet('editingTemplateId', null)
-        ->assertSet('successMessage', 'Prompt template has been updated.')
-        ->assertSee('Updated reminder');
+        ->assertRedirectToRoute('audio.prompt-templates');
 
     expect(PromptTemplate::query()->count())->toBe(1);
 
@@ -124,18 +158,14 @@ test('it updates a prompt template', function () {
 test('it cancels prompt template editing', function () {
     $template = PromptTemplate::factory()->create(['title' => 'Editable template']);
 
-    Livewire::test(PromptTemplateManager::class)
-        ->call('edit', $template->id)
+    Livewire::test(PromptTemplateFormPage::class, ['promptTemplate' => $template])
         ->assertSet('editingTemplateId', $template->id)
         ->call('cancelEdit')
-        ->assertSet('editingTemplateId', null)
-        ->assertSet('form.title', '')
-        ->assertSet('form.masterPrompt', '')
-        ->assertSet('form.promptText', '');
+        ->assertRedirectToRoute('audio.prompt-templates');
 });
 
 test('it validates prompt template fields', function () {
-    Livewire::test(PromptTemplateManager::class)
+    Livewire::test(PromptTemplateFormPage::class)
         ->set('form.title', '')
         ->set('form.masterPrompt', '')
         ->set('form.selectedLanguageCode', 'missing')
@@ -169,7 +199,7 @@ test('it removes a prompt template', function () {
         'tts_voice_label' => 'Female - Kore',
     ]);
 
-    Livewire::test(PromptTemplateManager::class)
+    Livewire::test(PromptTemplateIndex::class)
         ->assertSee('Short reminder')
         ->call('remove', $template->id)
         ->assertSet('successMessage', 'Prompt template has been removed.')

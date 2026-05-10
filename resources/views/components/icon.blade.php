@@ -14,6 +14,11 @@
     data-icon="{{ $name }}"
 >
     @switch($name)
+        @case('arrow-left')
+            <path d="m12 19-7-7 7-7" />
+            <path d="M19 12H5" />
+            @break
+
         @case('audio-lines')
             <path d="M2 10v3" />
             <path d="M6 6v11" />
@@ -96,6 +101,11 @@
         @case('play')
             <circle cx="12" cy="12" r="10" />
             <path d="M10 8l6 4-6 4z" />
+            @break
+
+        @case('plus')
+            <path d="M5 12h14" />
+            <path d="M12 5v14" />
             @break
 
         @case('save')
