@@ -2,20 +2,21 @@
 
 namespace App\Livewire;
 
-use App\Exceptions\AudioGenerationException;
-use App\Models\AudioGeneration;
-use App\Models\PromptTemplate;
-use App\Services\AudioGenerationHistoryService;
-use App\Services\GeminiAudioService;
-use App\Services\GeminiLanguageService;
-use App\Services\GeminiVoiceService;
-use App\Services\PromptTemplateService;
+use App\Actions\AudioGenerations\GenerateAudioAction;
+use App\Actions\AudioGenerations\LoadAudioGeneratorDataAction;
+use App\Actions\AudioGenerations\RemovePreviousPromptAction;
+use App\Actions\AudioGenerations\Requests\GenerateAudioRequest;
+use App\Actions\AudioGenerations\Requests\LoadAudioGeneratorDataRequest;
+use App\Actions\AudioGenerations\Requests\RemovePreviousPromptRequest;
+use App\Actions\AudioGenerations\Requests\UsePreviousPromptRequest;
+use App\Actions\AudioGenerations\Requests\UsePromptTemplateRequest;
+use App\Actions\AudioGenerations\UsePreviousPromptAction;
+use App\Actions\AudioGenerations\UsePromptTemplateAction;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Title;
 use Livewire\Component;
-use Throwable;
 
 #[Title('Gemini Audio Generator')]
 class AudioGenerator extends Component
@@ -74,8 +75,7 @@ class AudioGenerator extends Component
      */
     public function mount(): void
     {
-        $this->loadPromptTemplates();
-        $this->loadSavedGenerations();
+        $this->loadGeneratorData();
     }
 
     /**
@@ -84,70 +84,35 @@ class AudioGenerator extends Component
     public function generate(): void
     {
         $validated = $this->validate($this->templateRules(), $this->validationMessages());
-        $template = app(PromptTemplateService::class)->find((int) $validated['selectedPromptTemplateId']);
-
-        if ($template === null) {
-            $this->successMessage = null;
-            $this->errorMessage = self::ERROR_TEMPLATE_NOT_FOUND;
-
-            return;
-        }
-
-        $this->applyTemplate($template);
-
         $this->resetAudioResults(keepGeneration: true);
-        $history = app(AudioGenerationHistoryService::class);
-        $generation = $history->saveDraft(
+        $result = app(GenerateAudioAction::class)->handle(new GenerateAudioRequest(
+            (int) $validated['selectedPromptTemplateId'],
             $this->audioGenerationId,
-            $this->masterPrompt,
-            $this->text,
-            $this->selectedVoice,
-            $this->selectedLanguageCode,
-        );
+        ));
 
-        $this->syncGenerationState($history, $generation);
-
-        try {
-            $audio = app(GeminiAudioService::class)->generateWav(
-                $this->text,
-                $this->selectedVoice,
-                $this->selectedLanguageCode,
-            );
-            $generation = $history->markWavGenerated($generation, $audio);
-
-            $this->applyWavResult([
-                'path' => (string) $generation->audio_path,
-                'url' => (string) $generation->audio_url,
-            ]);
-            $this->syncGenerationState($history, $generation);
-            $this->successMessage = self::SUCCESS_WAV_GENERATED;
-        } catch (AudioGenerationException $exception) {
-            $generation = $history->markWavFailed(
-                $generation,
-                $this->selectedVoice,
-                $this->selectedLanguageCode,
-                $exception->getMessage(),
-            );
-
-            $this->syncGenerationState($history, $generation);
-            $this->errorMessage = $exception->getMessage();
-
-            return;
-        } catch (Throwable $exception) {
-            report($exception);
-
-            $generation = $history->markWavFailed(
-                $generation,
-                $this->selectedVoice,
-                $this->selectedLanguageCode,
-                self::ERROR_UNEXPECTED_GENERATION,
-            );
-
-            $this->syncGenerationState($history, $generation);
-            $this->errorMessage = self::ERROR_UNEXPECTED_GENERATION;
+        if ($result['template_state'] === null) {
+            $this->successMessage = null;
+            $this->errorMessage = $result['error_message'] ?? self::ERROR_TEMPLATE_NOT_FOUND;
 
             return;
         }
+
+        $this->applyTemplateState($result['template_state']);
+
+        if ($result['generation'] !== null) {
+            $this->audioGenerationId = $result['generation']->id;
+        }
+
+        if ($result['audio'] !== null) {
+            $this->applyWavResult($result['audio']);
+            $this->loadGeneratorData();
+            $this->successMessage = self::SUCCESS_WAV_GENERATED;
+
+            return;
+        }
+
+        $this->loadGeneratorData();
+        $this->errorMessage = $result['error_message'] ?? self::ERROR_UNEXPECTED_GENERATION;
     }
 
     /**
@@ -163,21 +128,13 @@ class AudioGenerator extends Component
      */
     public function usePrompt(int $generationId): void
     {
-        $generation = app(AudioGenerationHistoryService::class)->find($generationId);
+        $state = app(UsePreviousPromptAction::class)->handle(new UsePreviousPromptRequest($generationId));
 
-        if ($generation === null) {
+        if ($state === null) {
             return;
         }
 
-        $this->masterPrompt = (string) ($generation->master_prompt ?? $generation->prompt_brief);
-        $this->text = (string) $generation->text;
-        $this->selectedVoice = (string) $generation->tts_voice;
-        $this->selectedVoiceGender = (string) $generation->tts_voice_gender;
-        $this->selectedLanguageCode = (string) ($generation->tts_language_code ?: app(GeminiLanguageService::class)->default()['code']);
-        $this->selectedTemplate = null;
-        $this->audioGenerationId = $generation->id;
-        $this->wavPath = $generation->audio_path;
-        $this->wavUrl = $generation->audio_url;
+        $this->applyPreviousPromptState($state);
         $this->errorMessage = null;
         $this->successMessage = self::SUCCESS_PROMPT_LOADED;
     }
@@ -197,7 +154,7 @@ class AudioGenerator extends Component
             return;
         }
 
-        $template = app(PromptTemplateService::class)->find($id);
+        $template = app(UsePromptTemplateAction::class)->handle(new UsePromptTemplateRequest($id));
 
         if ($template === null) {
             $this->selectedPromptTemplateId = '';
@@ -207,8 +164,8 @@ class AudioGenerator extends Component
             return;
         }
 
-        $this->selectedPromptTemplateId = (string) $template->id;
-        $this->applyTemplate($template);
+        $this->selectedPromptTemplateId = (string) $template['template']->id;
+        $this->applyTemplateState($template['state']);
         $this->wavPath = null;
         $this->wavUrl = null;
         $this->errorMessage = null;
@@ -220,9 +177,7 @@ class AudioGenerator extends Component
      */
     public function removePrompt(int $generationId): void
     {
-        $history = app(AudioGenerationHistoryService::class);
-
-        if (! $history->delete($generationId)) {
+        if (! app(RemovePreviousPromptAction::class)->handle(new RemovePreviousPromptRequest($generationId))) {
             $this->successMessage = null;
             $this->errorMessage = self::ERROR_PROMPT_NOT_FOUND;
 
@@ -235,7 +190,7 @@ class AudioGenerator extends Component
             $this->wavUrl = null;
         }
 
-        $this->loadSavedGenerations($history);
+        $this->loadGeneratorData();
         $this->errorMessage = null;
         $this->successMessage = self::SUCCESS_PROMPT_REMOVED;
     }
@@ -286,44 +241,48 @@ class AudioGenerator extends Component
     }
 
     /**
-     * Refresh the right-side history list from the persistence service.
+     * Refresh the reusable template selector and generation history list.
      */
-    private function loadSavedGenerations(?AudioGenerationHistoryService $history = null): void
+    private function loadGeneratorData(): void
     {
-        $this->savedGenerations = ($history ?? app(AudioGenerationHistoryService::class))->recent();
-    }
+        $data = app(LoadAudioGeneratorDataAction::class)->handle(new LoadAudioGeneratorDataRequest);
 
-    /**
-     * Refresh the reusable prompt template selector.
-     */
-    private function loadPromptTemplates(?PromptTemplateService $templates = null): void
-    {
-        $this->promptTemplates = ($templates ?? app(PromptTemplateService::class))->options();
+        $this->promptTemplates = $data['prompt_templates'];
+        $this->savedGenerations = $data['saved_generations'];
     }
 
     /**
      * Apply every saved prompt template setting to the audio generation state.
+     *
+     * @param  array{master_prompt: string, text: string, selected_language_code: string, selected_voice_gender: string, selected_voice: string, selected_template: array{title: string, master_prompt: string, prompt_text: string, language_label: string, tts_voice_label: string}}  $state
      */
-    private function applyTemplate(PromptTemplate $template): void
+    private function applyTemplateState(array $state): void
     {
-        $languageService = app(GeminiLanguageService::class);
-        $voiceService = app(GeminiVoiceService::class);
-        $language = $languageService->find((string) $template->language_code) ?? $languageService->default();
-        $voice = $voiceService->find((string) $template->tts_voice) ?? $voiceService->default();
-
-        $this->masterPrompt = (string) $template->master_prompt;
-        $this->text = $template->prompt_text;
-        $this->selectedLanguageCode = $language['code'];
-        $this->selectedVoiceGender = $voice['gender'];
-        $this->selectedVoice = $voice['name'];
-        $this->selectedTemplate = [
-            'title' => $template->title,
-            'master_prompt' => (string) $template->master_prompt,
-            'prompt_text' => $template->prompt_text,
-            'language_label' => $language['label'],
-            'tts_voice_label' => $voice['label'],
-        ];
+        $this->masterPrompt = $state['master_prompt'];
+        $this->text = $state['text'];
+        $this->selectedLanguageCode = $state['selected_language_code'];
+        $this->selectedVoiceGender = $state['selected_voice_gender'];
+        $this->selectedVoice = $state['selected_voice'];
+        $this->selectedTemplate = $state['selected_template'];
         $this->resetValidation('selectedPromptTemplateId');
+    }
+
+    /**
+     * Apply a previous generation to the current preview state.
+     *
+     * @param  array{master_prompt: string, text: string, selected_voice: string, selected_voice_gender: string, selected_language_code: string, audio_generation_id: int, wav_path: string|null, wav_url: string|null}  $state
+     */
+    private function applyPreviousPromptState(array $state): void
+    {
+        $this->masterPrompt = $state['master_prompt'];
+        $this->text = $state['text'];
+        $this->selectedVoice = $state['selected_voice'];
+        $this->selectedVoiceGender = $state['selected_voice_gender'];
+        $this->selectedLanguageCode = $state['selected_language_code'];
+        $this->selectedTemplate = null;
+        $this->audioGenerationId = $state['audio_generation_id'];
+        $this->wavPath = $state['wav_path'];
+        $this->wavUrl = $state['wav_url'];
     }
 
     /**
@@ -335,14 +294,5 @@ class AudioGenerator extends Component
     {
         $this->wavPath = $audio['path'];
         $this->wavUrl = $audio['url'];
-    }
-
-    /**
-     * Keep the active generation id and saved history list synchronized.
-     */
-    private function syncGenerationState(AudioGenerationHistoryService $history, AudioGeneration $generation): void
-    {
-        $this->audioGenerationId = $generation->id;
-        $this->loadSavedGenerations($history);
     }
 }

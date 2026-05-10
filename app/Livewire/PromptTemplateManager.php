@@ -2,10 +2,25 @@
 
 namespace App\Livewire;
 
+use App\Actions\PromptTemplates\EditPromptTemplateAction;
+use App\Actions\PromptTemplates\ListPromptTemplateLanguagesAction;
+use App\Actions\PromptTemplates\ListPromptTemplatesAction;
+use App\Actions\PromptTemplates\ListPromptTemplateVoiceGendersAction;
+use App\Actions\PromptTemplates\ListPromptTemplateVoiceGeneratorsAction;
+use App\Actions\PromptTemplates\RemovePromptTemplateAction;
+use App\Actions\PromptTemplates\Requests\EditPromptTemplateRequest;
+use App\Actions\PromptTemplates\Requests\ListPromptTemplateLanguagesRequest;
+use App\Actions\PromptTemplates\Requests\ListPromptTemplatesRequest;
+use App\Actions\PromptTemplates\Requests\ListPromptTemplateVoiceGendersRequest;
+use App\Actions\PromptTemplates\Requests\ListPromptTemplateVoiceGeneratorsRequest;
+use App\Actions\PromptTemplates\Requests\RemovePromptTemplateRequest;
+use App\Actions\PromptTemplates\Requests\ResetPromptTemplateFormRequest;
+use App\Actions\PromptTemplates\Requests\SavePromptTemplateRequest;
+use App\Actions\PromptTemplates\Requests\SelectPromptTemplateVoiceGenderRequest;
+use App\Actions\PromptTemplates\ResetPromptTemplateFormAction;
+use App\Actions\PromptTemplates\SavePromptTemplateAction;
+use App\Actions\PromptTemplates\SelectPromptTemplateVoiceGenderAction;
 use App\Livewire\Forms\PromptTemplateForm;
-use App\Services\GeminiLanguageService;
-use App\Services\GeminiVoiceService;
-use App\Services\PromptTemplateService;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
@@ -39,7 +54,9 @@ class PromptTemplateManager extends Component
      */
     public function mount(): void
     {
-        $this->form->resetToDefaults();
+        $this->form->fillFromState(
+            app(ResetPromptTemplateFormAction::class)->handle(new ResetPromptTemplateFormRequest),
+        );
     }
 
     /**
@@ -49,24 +66,15 @@ class PromptTemplateManager extends Component
     {
         $validated = $this->form->validate();
 
-        $service = app(PromptTemplateService::class);
         $wasEditing = $this->editingTemplateId !== null;
-        $template = $this->editingTemplateId === null
-            ? $service->create(
-                $validated['title'],
-                $validated['masterPrompt'],
-                $validated['promptText'],
-                $validated['selectedLanguageCode'],
-                $validated['selectedVoice'],
-            )
-            : $service->update(
-                $this->editingTemplateId,
-                $validated['title'],
-                $validated['masterPrompt'],
-                $validated['promptText'],
-                $validated['selectedLanguageCode'],
-                $validated['selectedVoice'],
-            );
+        $template = app(SavePromptTemplateAction::class)->handle(new SavePromptTemplateRequest(
+            $this->editingTemplateId,
+            $validated['title'],
+            $validated['masterPrompt'],
+            $validated['promptText'],
+            $validated['selectedLanguageCode'],
+            $validated['selectedVoice'],
+        ));
 
         if ($template === null) {
             $this->successMessage = null;
@@ -85,17 +93,17 @@ class PromptTemplateManager extends Component
      */
     public function edit(int $templateId): void
     {
-        $template = app(PromptTemplateService::class)->find($templateId);
+        $state = app(EditPromptTemplateAction::class)->handle(new EditPromptTemplateRequest($templateId));
 
-        if ($template === null) {
+        if ($state === null) {
             $this->successMessage = null;
             $this->errorMessage = self::ERROR_TEMPLATE_NOT_FOUND;
 
             return;
         }
 
-        $this->editingTemplateId = $template->id;
-        $this->form->fillFromTemplate($template);
+        $this->editingTemplateId = $state['id'];
+        $this->form->fillFromState($state);
         $this->resetValidation();
         $this->errorMessage = null;
         $this->successMessage = null;
@@ -116,7 +124,7 @@ class PromptTemplateManager extends Component
      */
     public function remove(int $templateId): void
     {
-        if (! app(PromptTemplateService::class)->delete($templateId)) {
+        if (! app(RemovePromptTemplateAction::class)->handle(new RemovePromptTemplateRequest($templateId))) {
             $this->successMessage = null;
             $this->errorMessage = self::ERROR_TEMPLATE_NOT_FOUND;
 
@@ -132,7 +140,9 @@ class PromptTemplateManager extends Component
      */
     public function selectVoiceGender(string $gender): void
     {
-        $this->form->selectVoiceGender($gender);
+        $this->form->fillFromState(
+            app(SelectPromptTemplateVoiceGenderAction::class)->handle(new SelectPromptTemplateVoiceGenderRequest($gender)),
+        );
         $this->resetValidation('form.selectedVoice');
     }
 
@@ -152,7 +162,7 @@ class PromptTemplateManager extends Component
     #[Computed]
     public function languageGroups(): array
     {
-        return app(GeminiLanguageService::class)->groups();
+        return app(ListPromptTemplateLanguagesAction::class)->handle(new ListPromptTemplateLanguagesRequest);
     }
 
     /**
@@ -163,7 +173,7 @@ class PromptTemplateManager extends Component
     #[Computed]
     public function voiceGenders(): array
     {
-        return app(GeminiVoiceService::class)->genders();
+        return app(ListPromptTemplateVoiceGendersAction::class)->handle(new ListPromptTemplateVoiceGendersRequest);
     }
 
     /**
@@ -174,7 +184,9 @@ class PromptTemplateManager extends Component
     #[Computed]
     public function voiceGenerators(): array
     {
-        return $this->form->voiceGenerators();
+        return app(ListPromptTemplateVoiceGeneratorsAction::class)->handle(new ListPromptTemplateVoiceGeneratorsRequest(
+            $this->form->selectedVoiceGender,
+        ));
     }
 
     /**
@@ -185,7 +197,7 @@ class PromptTemplateManager extends Component
     #[Computed]
     public function promptTemplates(): array
     {
-        return app(PromptTemplateService::class)->recent();
+        return app(ListPromptTemplatesAction::class)->handle(new ListPromptTemplatesRequest);
     }
 
     /**
@@ -194,7 +206,9 @@ class PromptTemplateManager extends Component
     private function resetForm(): void
     {
         $this->editingTemplateId = null;
-        $this->form->resetToDefaults();
+        $this->form->fillFromState(
+            app(ResetPromptTemplateFormAction::class)->handle(new ResetPromptTemplateFormRequest),
+        );
         $this->resetValidation();
     }
 }

@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Forms;
 
-use App\Models\PromptTemplate;
 use App\Services\GeminiLanguageService;
 use App\Services\GeminiVoiceService;
 use Illuminate\Validation\Rule;
@@ -68,92 +67,34 @@ class PromptTemplateForm extends Form
     }
 
     /**
-     * Reset the form to empty text fields and configured Gemini defaults.
+     * Apply action-built form state without touching fields the state did not include.
+     *
+     * @param  array<string, mixed>  $state
      */
-    public function resetToDefaults(): void
+    public function fillFromState(array $state): void
     {
-        $this->title = '';
-        $this->masterPrompt = '';
-        $this->promptText = '';
-        $this->setSelectedLanguage(app(GeminiLanguageService::class)->default()['code']);
-        $this->setSelectedVoice(app(GeminiVoiceService::class)->default()['name']);
-    }
-
-    /**
-     * Fill the form from an existing prompt template for editing.
-     */
-    public function fillFromTemplate(PromptTemplate $template): void
-    {
-        $this->title = $template->title;
-        $this->masterPrompt = (string) $template->master_prompt;
-        $this->promptText = $template->prompt_text;
-        $this->setSelectedLanguage((string) $template->language_code);
-        $this->setSelectedVoice((string) $template->tts_voice);
-    }
-
-    /**
-     * Select a voice gender and default to the first matching generator.
-     */
-    public function selectVoiceGender(string $gender): void
-    {
-        $voiceService = app(GeminiVoiceService::class);
-        $generators = $this->voiceOptionsForGender($voiceService, $gender);
-
-        if ($generators === []) {
-            $this->setSelectedVoice($voiceService->default()['name']);
-
-            return;
+        if (array_key_exists('title', $state)) {
+            $this->title = (string) $state['title'];
         }
 
-        $this->selectedVoiceGender = $gender;
-        $this->selectedVoice = $generators[0]['name'];
-    }
+        if (array_key_exists('master_prompt', $state)) {
+            $this->masterPrompt = (string) $state['master_prompt'];
+        }
 
-    /**
-     * Return the voice options that belong to the selected gender.
-     *
-     * @return list<array{name: string, gender: string}>
-     */
-    public function voiceGenerators(): array
-    {
-        return $this->voiceOptionsForGender(app(GeminiVoiceService::class), $this->selectedVoiceGender);
-    }
+        if (array_key_exists('prompt_text', $state)) {
+            $this->promptText = (string) $state['prompt_text'];
+        }
 
-    /**
-     * Set the selected language to a supported Gemini-TTS language code.
-     */
-    private function setSelectedLanguage(string $languageCode): void
-    {
-        $languageService = app(GeminiLanguageService::class);
-        $language = $languageService->find($languageCode) ?? $languageService->default();
+        if (array_key_exists('selected_language_code', $state)) {
+            $this->selectedLanguageCode = (string) $state['selected_language_code'];
+        }
 
-        $this->selectedLanguageCode = $language['code'];
-    }
+        if (array_key_exists('selected_voice_gender', $state)) {
+            $this->selectedVoiceGender = (string) $state['selected_voice_gender'];
+        }
 
-    /**
-     * Set the selected voice and align the dependent gender field.
-     */
-    private function setSelectedVoice(string $voiceName): void
-    {
-        $voiceService = app(GeminiVoiceService::class);
-        $voice = $voiceService->find($voiceName) ?? $voiceService->default();
-
-        $this->selectedVoiceGender = $voice['gender'];
-        $this->selectedVoice = $voice['name'];
-    }
-
-    /**
-     * Build the slim voice option shape required by the Blade select.
-     *
-     * @return list<array{name: string, gender: string}>
-     */
-    private function voiceOptionsForGender(GeminiVoiceService $voiceService, string $gender): array
-    {
-        return collect($voiceService->generatorsForGender($gender))
-            ->map(fn (array $generator): array => [
-                'name' => $generator['name'],
-                'gender' => $generator['gender'],
-            ])
-            ->all();
+        if (array_key_exists('selected_voice', $state)) {
+            $this->selectedVoice = (string) $state['selected_voice'];
+        }
     }
 }
