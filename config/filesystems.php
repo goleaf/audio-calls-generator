@@ -15,7 +15,7 @@ $resolveFilesystemPath = static function (?string $path): ?string {
 };
 
 $publicDiskRoot = $resolveFilesystemPath(env('PUBLIC_DISK_ROOT')) ?? storage_path('app/public');
-$publicStorageLink = $resolveFilesystemPath(env('PUBLIC_STORAGE_LINK')) ?? public_path('storage');
+$publicStorageLink = $resolveFilesystemPath(env('PUBLIC_STORAGE_LINK'));
 
 return [
 
@@ -90,7 +90,7 @@ return [
     |
     */
 
-    'links' => $publicStorageLink === $publicDiskRoot ? [] : [
+    'links' => $publicStorageLink === null || $publicStorageLink === $publicDiskRoot ? [] : [
         $publicStorageLink => $publicDiskRoot,
     ],
 

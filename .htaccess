@@ -1,0 +1,51 @@
+<IfModule mod_rewrite.c>
+    <IfModule mod_negotiation.c>
+        Options -MultiViews -Indexes
+    </IfModule>
+
+    RewriteEngine On
+
+    # Canonical shared-hosting domain for the production subdomain.
+    RewriteCond %{HTTP_HOST} !^audio-calls-generator\.prus\.dev$ [NC]
+    RewriteRule ^ https://audio-calls-generator.prus.dev%{REQUEST_URI} [L,R=301]
+
+    RewriteCond %{HTTPS} !=on
+    RewriteCond %{HTTP:X-Forwarded-Proto} !https [NC]
+    RewriteRule ^ https://audio-calls-generator.prus.dev%{REQUEST_URI} [L,R=301]
+
+    # Keep private Laravel application directories out of the document root.
+    RewriteRule ^(?:app|bootstrap|config|database|node_modules|resources|routes|tests|vendor)(?:/|$) - [F,L]
+    RewriteRule ^(?:artisan|composer\.(?:json|lock)|package(?:-lock)?\.json|phpunit\.xml|vite\.config\.js|postcss\.config\.cjs|AGENTS\.md|CLAUDE\.md|GEMINI\.md|README\.md|opencode\.json|boost\.json)$ - [F,L]
+    RewriteRule (^|/)\.(?!well-known(?:/|$)) - [F,L]
+
+    # Serve generated Vite assets and static files without exposing /public in URLs.
+    RewriteRule ^build/(.*)$ public/build/$1 [L]
+    RewriteRule ^favicon\.ico$ public/favicon.ico [L]
+    RewriteRule ^robots\.txt$ public/robots.txt [L]
+
+    # Serve public storage files from storage/app/public without exposing private storage.
+    RewriteCond %{REQUEST_URI} !^/storage/app/public/
+    RewriteRule ^storage/(.*)$ storage/app/public/$1 [L]
+    RewriteRule ^storage/(?!app/public/).* - [F,L]
+
+    # Block direct execution of the legacy Laravel public front controller.
+    RewriteRule ^public/(?:index\.php|\.htaccess)$ - [F,L]
+
+    # Handle Authorization Header
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
+    # Handle X-XSRF-Token Header
+    RewriteCond %{HTTP:x-xsrf-token} .
+    RewriteRule .* - [E=HTTP_X_XSRF_TOKEN:%{HTTP:X-XSRF-Token}]
+
+    # Redirect Trailing Slashes If Not A Folder...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_URI} (.+)/$
+    RewriteRule ^ %1 [L,R=301]
+
+    # Send Requests To Front Controller...
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteRule ^ index.php [L]
+</IfModule>
