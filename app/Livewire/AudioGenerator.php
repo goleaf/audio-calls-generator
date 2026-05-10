@@ -5,6 +5,7 @@ namespace App\Livewire;
 use App\Exceptions\AudioGenerationException;
 use App\Models\AudioGeneration;
 use App\Services\AudioGenerationHistoryService;
+use App\Services\AudioVoicePreferenceService;
 use App\Services\GeminiAudioService;
 use App\Services\GeminiVoiceService;
 use App\Services\MasterPromptService;
@@ -67,7 +68,7 @@ class AudioGenerator extends Component
 
         $this->masterPrompt = app(MasterPromptService::class)->current();
         $this->voiceGenders = $voiceService->genders();
-        $this->setSelectedVoice($voiceService->default()['name']);
+        $this->setSelectedVoice(app(AudioVoicePreferenceService::class)->current()['name']);
         $this->loadSavedGenerations();
     }
 
@@ -154,7 +155,7 @@ class AudioGenerator extends Component
     }
 
     /**
-     * Select a gender, refresh the available voice names, and save the selected voice draft.
+     * Select a gender, refresh the available voice names, and save the voice preference.
      */
     public function selectVoiceGender(string $gender): void
     {
@@ -171,11 +172,11 @@ class AudioGenerator extends Component
         $this->voiceGenerators = $generators;
         $this->selectedVoice = $generators[0]['name'];
         $this->resetValidation('selectedVoice');
-        $this->saveCurrentVoiceSelection();
+        $this->saveCurrentVoicePreference();
     }
 
     /**
-     * Select and save a voice name that belongs to the currently selected gender.
+     * Select and save a voice preference that belongs to the currently selected gender.
      */
     public function selectVoice(string $voiceName): void
     {
@@ -190,7 +191,7 @@ class AudioGenerator extends Component
 
         $this->selectedVoice = $voice['name'];
         $this->resetValidation('selectedVoice');
-        $this->saveCurrentVoiceSelection();
+        $this->saveCurrentVoicePreference();
     }
 
     /**
@@ -301,19 +302,11 @@ class AudioGenerator extends Component
     }
 
     /**
-     * Persist the currently selected voice as a draft generation record.
+     * Persist the currently selected voice without changing previous prompt history.
      */
-    private function saveCurrentVoiceSelection(): void
+    private function saveCurrentVoicePreference(): void
     {
-        $history = app(AudioGenerationHistoryService::class);
-        $generation = $history->saveDraft(
-            $this->audioGenerationId,
-            $this->nullableString($this->masterPrompt),
-            $this->nullableString($this->text),
-            $this->selectedVoice,
-        );
-
-        $this->syncGenerationState($history, $generation);
+        app(AudioVoicePreferenceService::class)->save($this->selectedVoice);
     }
 
     /**

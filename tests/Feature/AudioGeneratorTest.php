@@ -3,6 +3,7 @@
 use App\Exceptions\AudioGenerationException;
 use App\Livewire\AudioGenerator;
 use App\Models\AudioGeneration;
+use App\Models\AudioVoicePreference;
 use App\Models\MasterPrompt;
 use App\Services\GeminiAudioService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -58,32 +59,43 @@ test('voice generator names are filtered by selected gender', function () {
         ->assertDontSee('Kore');
 });
 
-test('it saves the selected voice when gender or generator changes', function () {
+test('it saves the selected voice preference without creating a previous prompt', function () {
     Livewire::test(AudioGenerator::class)
         ->set('masterPrompt', 'Persist selected voice with this prompt.')
         ->set('text', 'Persist selected voice with this text.')
         ->call('selectVoiceGender', 'Male')
-        ->assertSet('audioGenerationId', 1)
+        ->assertSet('audioGenerationId', null)
         ->assertSet('selectedVoiceGender', 'Male')
         ->assertSet('selectedVoice', 'Puck')
-        ->assertSet('savedGenerations.0.tts_voice', 'Puck')
+        ->assertSet('savedGenerations', [])
         ->call('selectVoice', 'Charon')
-        ->assertSet('audioGenerationId', 1)
+        ->assertSet('audioGenerationId', null)
         ->assertSet('selectedVoiceGender', 'Male')
         ->assertSet('selectedVoice', 'Charon')
-        ->assertSet('savedGenerations.0.tts_voice', 'Charon');
+        ->assertSet('savedGenerations', []);
 
-    expect(AudioGeneration::query()->count())->toBe(1);
+    expect(AudioGeneration::query()->count())->toBe(0);
 
-    $this->assertDatabaseHas('audio_generations', [
-        'id' => 1,
-        'master_prompt' => 'Persist selected voice with this prompt.',
-        'text' => 'Persist selected voice with this text.',
-        'status' => AudioGeneration::STATUS_DRAFT,
+    $this->assertDatabaseHas('audio_voice_preferences', [
+        'key' => AudioVoicePreference::CURRENT_KEY,
         'tts_voice' => 'Charon',
         'tts_voice_gender' => 'Male',
         'tts_voice_label' => 'Male - Charon',
     ]);
+});
+
+test('it loads the saved voice preference on the page', function () {
+    AudioVoicePreference::factory()->create([
+        'key' => AudioVoicePreference::CURRENT_KEY,
+        'tts_voice' => 'Puck',
+        'tts_voice_gender' => 'Male',
+        'tts_voice_label' => 'Male - Puck',
+    ]);
+
+    Livewire::test(AudioGenerator::class)
+        ->assertSet('selectedVoiceGender', 'Male')
+        ->assertSet('selectedVoice', 'Puck')
+        ->assertSet('voiceGenerators.0.name', 'Puck');
 });
 
 test('it updates the saved voice draft when generating audio', function () {
