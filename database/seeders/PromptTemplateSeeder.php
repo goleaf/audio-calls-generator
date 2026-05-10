@@ -14,6 +14,10 @@ class PromptTemplateSeeder extends Seeder
      */
     public function run(GeminiLanguageService $languages, GeminiVoiceService $voices): void
     {
+        PromptTemplate::query()
+            ->whereIn('title', $this->legacyEnglishTemplateTitles())
+            ->delete();
+
         foreach ($this->templates() as $template) {
             $language = $languages->find($template['language_code']) ?? $languages->default();
             $voice = $voices->find($template['voice']) ?? $voices->default();
@@ -43,26 +47,40 @@ class PromptTemplateSeeder extends Seeder
     {
         return [
             [
-                'title' => 'Warm support greeting',
-                'master_prompt' => 'Speak as a friendly support representative. Keep the pacing clear and natural.',
-                'prompt_text' => 'Hello, thank you for calling. I am checking your request now and will guide you through the next step.',
-                'language_code' => 'en-US',
+                'title' => 'Šiltas pasisveikinimas',
+                'master_prompt' => 'Kalbėk lietuviškai kaip draugiškas klientų aptarnavimo specialistas. Išlaikyk aiškų, natūralų tempą.',
+                'prompt_text' => 'Sveiki, ačiū, kad paskambinote. Peržiūriu jūsų užklausą ir netrukus padėsiu atlikti kitą žingsnį.',
+                'language_code' => 'lt-LT',
                 'voice' => 'Kore',
             ],
             [
-                'title' => 'Lithuanian billing reminder',
-                'master_prompt' => 'Speak in Lithuanian with a calm billing support tone. Keep the message concise.',
+                'title' => 'Sąskaitos priminimas',
+                'master_prompt' => 'Kalbėk lietuviškai ramiu sąskaitų aptarnavimo tonu. Žinutė turi būti trumpa ir aiški.',
                 'prompt_text' => 'Sveiki, primename, kad jūsų sąskaita jau paruošta peržiūrai. Jei turite klausimų, susisiekite su mūsų komanda.',
                 'language_code' => 'lt-LT',
                 'voice' => 'Puck',
             ],
             [
-                'title' => 'Delivery update',
-                'master_prompt' => 'Speak with a direct operations tone. The message should sound helpful and precise.',
-                'prompt_text' => 'Your delivery status has been updated. Please check the latest arrival time before planning pickup.',
-                'language_code' => 'en-GB',
+                'title' => 'Pristatymo atnaujinimas',
+                'master_prompt' => 'Kalbėk lietuviškai tiesiu ir tiksliu operacijų komandos tonu. Žinutė turi skambėti naudingai.',
+                'prompt_text' => 'Jūsų pristatymo būsena atnaujinta. Prieš planuodami atsiėmimą, patikrinkite naujausią atvykimo laiką.',
+                'language_code' => 'lt-LT',
                 'voice' => 'Aoede',
             ],
+        ];
+    }
+
+    /**
+     * Return old shipped template titles that should not remain after reseeding.
+     *
+     * @return list<string>
+     */
+    private function legacyEnglishTemplateTitles(): array
+    {
+        return [
+            'Warm support greeting',
+            'Lithuanian billing reminder',
+            'Delivery update',
         ];
     }
 }

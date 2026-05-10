@@ -53,7 +53,7 @@ https://audio-calls-generator.prus.dev
   - voice display label.
 - The index page is a table, and the create/edit form is a separate page.
 - The generator page only uses saved templates, so generation settings come from the selected template.
-- Seed data creates starter templates for support greetings, billing reminders, and delivery updates.
+- Seed data creates Lithuanian starter templates for support greetings, billing reminders, and delivery updates.
 
 ### Audio Generation
 

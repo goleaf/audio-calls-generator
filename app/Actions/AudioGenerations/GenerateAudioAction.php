@@ -36,7 +36,7 @@ class GenerateAudioAction
             return $this->result(null, null, null, 'Prompt template was not found.');
         }
 
-        $state = $template['state'];
+        $state = $this->stateWithEditedPrompt($template['state'], $request);
         $generation = $this->history->saveDraft(
             $request->audioGenerationId,
             $state['master_prompt'],
@@ -68,6 +68,25 @@ class GenerateAudioAction
 
             return $this->result($state, $generation, null, self::ERROR_UNEXPECTED_GENERATION);
         }
+    }
+
+    /**
+     * Apply the editable generator fields while keeping template language and voice settings.
+     *
+     * @param  array<string, mixed>  $state
+     * @return array<string, mixed>
+     */
+    private function stateWithEditedPrompt(array $state, GenerateAudioRequest $request): array
+    {
+        $state['master_prompt'] = trim($request->masterPrompt);
+        $state['text'] = trim($request->text);
+
+        if (isset($state['selected_template']) && is_array($state['selected_template'])) {
+            $state['selected_template']['master_prompt'] = $state['master_prompt'];
+            $state['selected_template']['prompt_text'] = $state['text'];
+        }
+
+        return $state;
     }
 
     /**

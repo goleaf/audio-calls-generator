@@ -76,16 +76,50 @@
                                 </div>
                             </div>
 
-                            @if ($selectedTemplate['master_prompt'] !== '')
-                                <div class="space-y-1">
-                                    <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Master prompt</p>
-                                    <p class="break-words text-sm leading-6 text-slate-600">{{ $selectedTemplate['master_prompt'] }}</p>
-                                </div>
-                            @endif
+                            <div class="space-y-3">
+                                <div class="space-y-2">
+                                    <div class="audio-generator__label-row">
+                                        <label for="masterPrompt" class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
+                                            <x-icon name="message-square-text" class="size-4 text-slate-500" />
+                                            <span>Master prompt</span>
+                                        </label>
+                                        <span class="text-xs text-slate-500">{{ mb_strlen($masterPrompt) }} / 2000</span>
+                                    </div>
 
-                            <div class="space-y-1">
-                                <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Prompt text</p>
-                                <p class="break-words text-sm leading-6 text-slate-600">{{ $selectedTemplate['prompt_text'] }}</p>
+                                    <textarea
+                                        id="masterPrompt"
+                                        wire:model="masterPrompt"
+                                        rows="4"
+                                        maxlength="2000"
+                                        class="w-full resize-y rounded-md border border-slate-300 px-3 py-2 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
+                                    ></textarea>
+
+                                    @error('masterPrompt')
+                                        <p class="text-sm text-red-600" wire:transition>{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div class="space-y-2">
+                                    <div class="audio-generator__label-row">
+                                        <label for="promptText" class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
+                                            <x-icon name="file-text" class="size-4 text-slate-500" />
+                                            <span>Prompt text</span>
+                                        </label>
+                                        <span class="text-xs text-slate-500">{{ mb_strlen($text) }} / 5000</span>
+                                    </div>
+
+                                    <textarea
+                                        id="promptText"
+                                        wire:model="text"
+                                        rows="8"
+                                        maxlength="5000"
+                                        class="w-full resize-y rounded-md border border-slate-300 px-3 py-2 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
+                                    ></textarea>
+
+                                    @error('text')
+                                        <p class="text-sm text-red-600" wire:transition>{{ $message }}</p>
+                                    @enderror
+                                </div>
                             </div>
                         </section>
                     @endif

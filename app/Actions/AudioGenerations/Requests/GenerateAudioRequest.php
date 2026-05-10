@@ -10,5 +10,7 @@ readonly class GenerateAudioRequest
     public function __construct(
         public int $promptTemplateId,
         public ?int $audioGenerationId,
+        public string $masterPrompt,
+        public string $text,
     ) {}
 }

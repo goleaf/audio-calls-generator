@@ -119,6 +119,8 @@ class AudioGenerator extends Component
         $result = $this->generateAudio->handle(new GenerateAudioRequest(
             (int) $validated['selectedPromptTemplateId'],
             $this->audioGenerationId,
+            trim((string) $validated['masterPrompt']),
+            trim((string) $validated['text']),
         ));
 
         if ($result['template_state'] === null) {

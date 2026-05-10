@@ -214,16 +214,17 @@ test('prompt template seeder stores complete prompt templates', function () {
     $this->seed(PromptTemplateSeeder::class);
 
     expect(PromptTemplate::query()->count())->toBeGreaterThan(1);
+    expect(PromptTemplate::query()->where('language_code', '!=', 'lt-LT')->exists())->toBeFalse();
 
     $this->assertDatabaseHas('prompt_templates', [
-        'title' => 'Warm support greeting',
-        'language_code' => 'en-US',
+        'title' => 'Šiltas pasisveikinimas',
+        'language_code' => 'lt-LT',
         'tts_voice' => 'Kore',
         'tts_voice_gender' => 'Female',
     ]);
 
     $this->assertDatabaseHas('prompt_templates', [
-        'title' => 'Lithuanian billing reminder',
+        'title' => 'Sąskaitos priminimas',
         'language_code' => 'lt-LT',
         'tts_voice' => 'Puck',
         'tts_voice_gender' => 'Male',

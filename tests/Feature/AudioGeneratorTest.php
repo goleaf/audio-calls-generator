@@ -58,9 +58,63 @@ test('audio generator loads every saved prompt template setting', function () {
         ->assertSet('selectedVoice', 'Puck')
         ->assertSet('text', 'Ask the caller if they need more help with their order.')
         ->assertSet('selectedTemplate.title', 'Follow up call')
+        ->assertSee('Master prompt')
+        ->assertSee('Prompt text')
         ->assertSee('Male - Puck')
         ->assertSee('Lithuanian (Lithuania) - lt-LT')
         ->assertSet('successMessage', 'Prompt template has been loaded.');
+});
+
+test('it generates wav audio using edited prompt values from the main page', function () {
+    $template = PromptTemplate::factory()->create([
+        'title' => 'Editable generation script',
+        'master_prompt' => 'Original template instruction.',
+        'prompt_text' => 'Original template text.',
+        'language_code' => 'lt-LT',
+        'language_name' => 'Lithuanian (Lithuania)',
+        'language_readiness' => 'Preview',
+        'tts_voice' => 'Kore',
+        'tts_voice_gender' => 'Female',
+        'tts_voice_label' => 'Female - Kore',
+    ]);
+
+    $this->mock(GeminiAudioService::class)
+        ->shouldReceive('generateWav')
+        ->once()
+        ->with('Sveiki, čia atnaujintas tekstas kliento skambučiui.', 'Kore', 'lt-LT')
+        ->andReturn([
+            'path' => 'audio/edited.wav',
+            'url' => '/storage/audio/edited.wav',
+            'name' => 'edited.wav',
+            'disk' => 'public',
+            'mime_type' => 'audio/wav',
+            'size' => 3,
+            'voice' => 'Kore',
+            'voice_gender' => 'Female',
+            'voice_label' => 'Female - Kore',
+            'language_code' => 'lt-LT',
+            'language_name' => 'Lithuanian (Lithuania)',
+            'language_readiness' => 'Preview',
+            'language_label' => 'Lithuanian (Lithuania) - lt-LT',
+        ]);
+
+    Livewire::test(AudioGenerator::class)
+        ->call('usePromptTemplate', $template->id)
+        ->set('masterPrompt', 'Kalbėk lietuviškai, ramiai ir aiškiai.')
+        ->set('text', 'Sveiki, čia atnaujintas tekstas kliento skambučiui.')
+        ->call('generate')
+        ->assertHasNoErrors()
+        ->assertSet('wavPath', 'audio/edited.wav')
+        ->assertSet('successMessage', 'WAV audio has been generated.');
+
+    $this->assertDatabaseHas('audio_generations', [
+        'master_prompt' => 'Kalbėk lietuviškai, ramiai ir aiškiai.',
+        'text' => 'Sveiki, čia atnaujintas tekstas kliento skambučiui.',
+        'status' => AudioGeneration::STATUS_WAV_GENERATED,
+        'audio_path' => 'audio/edited.wav',
+        'tts_language_code' => 'lt-LT',
+        'tts_voice' => 'Kore',
+    ]);
 });
 
 test('template is required before generating audio', function () {

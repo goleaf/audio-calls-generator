@@ -19,6 +19,8 @@ class GenerateAudioRules
                 'integer',
                 Rule::exists('prompt_templates', 'id'),
             ],
+            'masterPrompt' => ['required', 'string', 'min:3', 'max:2000'],
+            'text' => ['required', 'string', 'min:3', 'max:5000'],
         ];
     }
 
@@ -33,6 +35,12 @@ class GenerateAudioRules
             'selectedPromptTemplateId.required' => 'Choose a prompt template first.',
             'selectedPromptTemplateId.integer' => 'Choose an available prompt template.',
             'selectedPromptTemplateId.exists' => 'Choose an available prompt template.',
+            'masterPrompt.required' => 'Enter a master prompt.',
+            'masterPrompt.min' => 'The master prompt must contain at least :min characters.',
+            'masterPrompt.max' => 'The master prompt must not be longer than :max characters.',
+            'text.required' => 'Enter prompt text.',
+            'text.min' => 'The prompt text must contain at least :min characters.',
+            'text.max' => 'The prompt text must not be longer than :max characters.',
         ];
     }
 }
