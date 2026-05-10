@@ -1,0 +1,17 @@
+$transition-duration: 150ms;
+$transition-timing: ease;
+
+.audio-generator {
+    select,
+    textarea,
+    button,
+    a {
+        transition-duration: $transition-duration;
+        transition-property: background-color, border-color, color, opacity;
+        transition-timing-function: $transition-timing;
+    }
+
+    audio {
+        inline-size: 100%;
+    }
+}
