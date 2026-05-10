@@ -2,49 +2,6 @@
     <main class="audio-generator__shell">
         <div class="audio-generator__grid">
             <section class="audio-generator__main space-y-7 sm:space-y-8">
-                <form wire:submit="saveMasterPrompt" class="space-y-4">
-                    <div class="space-y-2">
-                        <div class="audio-generator__label-row">
-                            <label for="masterPrompt" class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
-                                <x-icon name="notebook-pen" class="size-4 text-slate-500" />
-                                <span>Master prompt</span>
-                            </label>
-                            <span class="text-xs text-slate-500">{{ mb_strlen($masterPrompt) }} / 2000</span>
-                        </div>
-
-                        <textarea
-                            id="masterPrompt"
-                            wire:model="masterPrompt"
-                            rows="5"
-                            maxlength="2000"
-                            class="w-full resize-y rounded-md border border-slate-300 px-3 py-2 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
-                            placeholder="Write the main instruction for Gemini."
-                        ></textarea>
-
-                        @error('masterPrompt')
-                            <p class="text-sm text-red-600" wire:transition>{{ $message }}</p>
-                        @enderror
-                    </div>
-
-                    <div class="audio-generator__actions">
-                        <button
-                            type="submit"
-                            wire:loading.attr="disabled"
-                            wire:target="saveMasterPrompt"
-                            class="audio-generator__button inline-flex min-h-11 items-center justify-center rounded-md border border-slate-300 bg-white px-4 py-2 text-sm font-medium text-slate-900 hover:bg-slate-50 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 disabled:cursor-not-allowed disabled:opacity-60"
-                        >
-                            <span wire:loading.remove wire:target="saveMasterPrompt" class="audio-generator__button-content inline-flex items-center gap-2">
-                                <x-icon name="save" />
-                                <span>Save master prompt</span>
-                            </span>
-                            <span wire:loading.flex wire:target="saveMasterPrompt" class="audio-generator__button-content items-center gap-2">
-                                <span class="audio-generator__button-spinner audio-generator__button-spinner--dark" aria-hidden="true"></span>
-                                <span>Saving...</span>
-                            </span>
-                        </button>
-                    </div>
-                </form>
-
                 @if ($errorMessage)
                     <p class="inline-flex items-start gap-2 text-sm text-red-600" wire:transition>
                         <x-icon name="circle-alert" class="mt-0.5" />
@@ -60,127 +17,78 @@
                 @endif
 
                 <form wire:submit="generate" class="space-y-4">
-                    <div class="audio-generator__field-row">
-                        <div class="space-y-2">
-                            <label for="selectedPromptTemplateId" class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
-                                <x-icon name="notebook-pen" class="size-4 text-slate-500" />
-                                <span>Prompt template</span>
-                            </label>
-
-                            <select
-                                id="selectedPromptTemplateId"
-                                wire:model="selectedPromptTemplateId"
-                                wire:change="usePromptTemplate($event.target.value)"
-                                class="min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
-                            >
-                                <option value="">Select a saved template</option>
-                                @foreach ($promptTemplates as $template)
-                                    <option value="{{ $template['id'] }}">{{ $template['title'] }}</option>
-                                @endforeach
-                            </select>
-
-                            @if ($promptTemplates === [])
-                                <p class="text-sm text-slate-500">
-                                    Create templates on the
-                                    <a href="{{ route('audio.prompt-templates') }}" wire:navigate class="text-slate-700 underline underline-offset-4 hover:text-slate-950">Prompt templates</a>
-                                    page.
-                                </p>
-                            @endif
-                        </div>
-
-                        <div class="space-y-2">
-                            <label for="selectedLanguageCode" class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
-                                <x-icon name="languages" class="size-4 text-slate-500" />
-                                <span>Language</span>
-                            </label>
-
-                            <select
-                                id="selectedLanguageCode"
-                                wire:model="selectedLanguageCode"
-                                class="min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
-                            >
-                                @foreach ($languageGroups as $readiness => $languages)
-                                    <optgroup label="{{ $readiness }}">
-                                        @foreach ($languages as $language)
-                                            <option value="{{ $language['code'] }}">{{ $language['label'] }}</option>
-                                        @endforeach
-                                    </optgroup>
-                                @endforeach
-                            </select>
-
-                            @error('selectedLanguageCode')
-                                <p class="text-sm text-red-600" wire:transition>{{ $message }}</p>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="audio-generator__field-row">
-                        <div class="space-y-2">
-                            <label for="selectedVoiceGender" class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
-                                <x-icon name="users" class="size-4 text-slate-500" />
-                                <span>Voice gender</span>
-                            </label>
-
-                            <select
-                                id="selectedVoiceGender"
-                                wire:model="selectedVoiceGender"
-                                wire:change="selectVoiceGender($event.target.value)"
-                                class="min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
-                            >
-                                @foreach ($voiceGenders as $gender)
-                                    <option value="{{ $gender }}">{{ $gender }}</option>
-                                @endforeach
-                            </select>
-
-                            @error('selectedVoiceGender')
-                                <p class="text-sm text-red-600" wire:transition>{{ $message }}</p>
-                            @enderror
-                        </div>
-
-                        <div class="space-y-2">
-                            <label for="selectedVoice" class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
-                                <x-icon name="mic" class="size-4 text-slate-500" />
-                                <span>Voice generator</span>
-                            </label>
-
-                            <select
-                                id="selectedVoice"
-                                wire:key="voice-generator-{{ $selectedVoiceGender }}"
-                                wire:model="selectedVoice"
-                                wire:change="selectVoice($event.target.value)"
-                                class="min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
-                            >
-                                @foreach ($voiceGenerators as $generator)
-                                    <option value="{{ $generator['name'] }}">{{ $generator['name'] }}</option>
-                                @endforeach
-                            </select>
-
-                            @error('selectedVoice')
-                                <p class="text-sm text-red-600" wire:transition>{{ $message }}</p>
-                            @enderror
-                        </div>
-                    </div>
-
-                    <div class="audio-generator__label-row">
-                        <label for="text" class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
-                            <x-icon name="file-text" class="size-4 text-slate-500" />
-                            <span>Text</span>
+                    <div class="space-y-2">
+                        <label for="selectedPromptTemplateId" class="inline-flex items-center gap-2 text-sm font-medium text-slate-900">
+                            <x-icon name="notebook-pen" class="size-4 text-slate-500" />
+                            <span>Prompt template</span>
                         </label>
-                        <span class="text-xs text-slate-500">{{ mb_strlen($text) }} / 5000</span>
+
+                        <select
+                            id="selectedPromptTemplateId"
+                            wire:model="selectedPromptTemplateId"
+                            wire:change="usePromptTemplate($event.target.value)"
+                            class="min-h-11 w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
+                        >
+                            <option value="">Select a saved template</option>
+                            @foreach ($promptTemplates as $template)
+                                <option value="{{ $template['id'] }}">{{ $template['title'] }}</option>
+                            @endforeach
+                        </select>
+
+                        @error('selectedPromptTemplateId')
+                            <p class="text-sm text-red-600" wire:transition>{{ $message }}</p>
+                        @enderror
+
+                        @if ($promptTemplates === [])
+                            <p class="text-sm text-slate-500">
+                                Create templates on the
+                                <a href="{{ route('audio.prompt-templates') }}" wire:navigate class="text-slate-700 underline underline-offset-4 hover:text-slate-950">Prompt templates</a>
+                                page.
+                            </p>
+                        @endif
                     </div>
 
-                    <textarea
-                        id="text"
-                        wire:model="text"
-                        rows="12"
-                        maxlength="5000"
-                        class="w-full resize-y rounded-md border border-slate-300 px-3 py-2 text-sm leading-6 text-slate-900 outline-none placeholder:text-slate-400 focus:border-slate-900 focus:ring-1 focus:ring-slate-900"
-                        placeholder="Enter text to generate audio."
-                    ></textarea>
+                    @if ($selectedTemplate)
+                        <section class="space-y-3 border-y border-slate-200 py-4" wire:transition>
+                            <div class="grid gap-3 sm:grid-cols-3">
+                                <div class="space-y-1">
+                                    <p class="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+                                        <x-icon name="notebook-pen" class="size-3.5" />
+                                        <span>Template</span>
+                                    </p>
+                                    <p class="break-words text-sm font-medium text-slate-900">{{ $selectedTemplate['title'] }}</p>
+                                </div>
 
-                    @error('text')
-                        <p class="text-sm text-red-600" wire:transition>{{ $message }}</p>
-                    @enderror
+                                <div class="space-y-1">
+                                    <p class="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+                                        <x-icon name="mic" class="size-3.5" />
+                                        <span>Voice</span>
+                                    </p>
+                                    <p class="break-words text-sm font-medium text-slate-900">{{ $selectedTemplate['tts_voice_label'] }}</p>
+                                </div>
+
+                                <div class="space-y-1">
+                                    <p class="inline-flex items-center gap-1.5 text-xs font-medium uppercase tracking-wide text-slate-500">
+                                        <x-icon name="languages" class="size-3.5" />
+                                        <span>Language</span>
+                                    </p>
+                                    <p class="break-words text-sm font-medium text-slate-900">{{ $selectedTemplate['language_label'] }}</p>
+                                </div>
+                            </div>
+
+                            @if ($selectedTemplate['master_prompt'] !== '')
+                                <div class="space-y-1">
+                                    <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Master prompt</p>
+                                    <p class="break-words text-sm leading-6 text-slate-600">{{ $selectedTemplate['master_prompt'] }}</p>
+                                </div>
+                            @endif
+
+                            <div class="space-y-1">
+                                <p class="text-xs font-medium uppercase tracking-wide text-slate-500">Prompt text</p>
+                                <p class="break-words text-sm leading-6 text-slate-600">{{ $selectedTemplate['prompt_text'] }}</p>
+                            </div>
+                        </section>
+                    @endif
 
                     <div class="audio-generator__actions">
                         <button

@@ -3,6 +3,7 @@
 use App\Exceptions\AudioGenerationException;
 use App\Livewire\AudioGenerator;
 use App\Models\AudioGeneration;
+use App\Models\PromptTemplate;
 use App\Services\GeminiAudioService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -11,13 +12,24 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     config()->set('services.gemini.model', 'gemini-3.1-flash-tts-preview');
-    config()->set('services.gemini.voice', 'Kore');
     config()->set('services.gemini.audio.sample_rate', 24000);
     config()->set('services.gemini.audio.channels', 1);
     config()->set('services.gemini.audio.sample_width', 2);
 });
 
-test('it saves direct audio generation information with a selected male voice', function () {
+test('it saves audio generation information from the selected prompt template', function () {
+    $template = PromptTemplate::factory()->create([
+        'title' => 'Demo welcome',
+        'master_prompt' => 'Write a concise announcement.',
+        'prompt_text' => 'Welcome to the demo.',
+        'language_code' => 'en-US',
+        'language_name' => 'English (United States)',
+        'language_readiness' => 'GA',
+        'tts_voice' => 'Puck',
+        'tts_voice_gender' => 'Male',
+        'tts_voice_label' => 'Male - Puck',
+    ]);
+
     $this->mock(GeminiAudioService::class)
         ->shouldReceive('generateWav')
         ->once()
@@ -39,10 +51,7 @@ test('it saves direct audio generation information with a selected male voice', 
         ]);
 
     Livewire::test(AudioGenerator::class)
-        ->set('masterPrompt', 'Write a concise announcement.')
-        ->set('text', 'Welcome to the demo.')
-        ->call('selectVoiceGender', 'Male')
-        ->set('selectedVoice', 'Puck')
+        ->call('usePromptTemplate', $template->id)
         ->call('generate')
         ->assertSet('audioGenerationId', 1)
         ->assertSet('savedGenerations.0.audio_path', 'audio/demo.wav')
@@ -75,7 +84,18 @@ test('it saves direct audio generation information with a selected male voice', 
     ]);
 });
 
-test('it saves the prompt before calling Gemini to generate audio', function () {
+test('it saves the template prompt before calling Gemini to generate audio', function () {
+    $template = PromptTemplate::factory()->create([
+        'master_prompt' => 'Persist this master prompt immediately.',
+        'prompt_text' => 'Save this text before audio exists.',
+        'language_code' => 'en-US',
+        'language_name' => 'English (United States)',
+        'language_readiness' => 'GA',
+        'tts_voice' => 'Kore',
+        'tts_voice_gender' => 'Female',
+        'tts_voice_label' => 'Female - Kore',
+    ]);
+
     $this->mock(GeminiAudioService::class)
         ->shouldReceive('generateWav')
         ->once()
@@ -105,8 +125,7 @@ test('it saves the prompt before calling Gemini to generate audio', function () 
         });
 
     Livewire::test(AudioGenerator::class)
-        ->set('masterPrompt', 'Persist this master prompt immediately.')
-        ->set('text', 'Save this text before audio exists.')
+        ->call('usePromptTemplate', $template->id)
         ->call('generate')
         ->assertSet('audioGenerationId', 1)
         ->assertSet('savedGenerations.0.audio_path', 'audio/saved-before-call.wav');
@@ -121,48 +140,14 @@ test('it saves the prompt before calling Gemini to generate audio', function () 
     ]);
 });
 
-test('it saves direct audio generation information to the database', function () {
-    $this->mock(GeminiAudioService::class)
-        ->shouldReceive('generateWav')
-        ->once()
-        ->with('Direct text', 'Kore', 'en-US')
-        ->andReturn([
-            'path' => 'audio/direct.wav',
-            'url' => '/storage/audio/direct.wav',
-            'name' => 'direct.wav',
-            'disk' => 'public',
-            'mime_type' => 'audio/wav',
-            'size' => 256,
-            'voice' => 'Kore',
-            'voice_gender' => 'Female',
-            'voice_label' => 'Female - Kore',
-            'language_code' => 'en-US',
-            'language_name' => 'English (United States)',
-            'language_readiness' => 'GA',
-            'language_label' => 'English (United States) - en-US',
-        ]);
-
-    Livewire::test(AudioGenerator::class)
-        ->set('text', 'Direct text')
-        ->call('generate')
-        ->assertSet('audioGenerationId', 1)
-        ->assertSet('savedGenerations.0.audio_path', 'audio/direct.wav')
-        ->assertSee('direct.wav');
-
-    $this->assertDatabaseHas('audio_generations', [
-        'prompt_brief' => 'Write a short, ready-to-speak audio script. Return only the final script text.',
-        'master_prompt' => 'Write a short, ready-to-speak audio script. Return only the final script text.',
-        'text' => 'Direct text',
-        'status' => AudioGeneration::STATUS_WAV_GENERATED,
-        'audio_path' => 'audio/direct.wav',
+test('it normalizes generated audio urls before saving them for playback', function () {
+    $template = PromptTemplate::factory()->create([
+        'prompt_text' => 'Direct text',
         'tts_voice' => 'Kore',
         'tts_voice_gender' => 'Female',
         'tts_voice_label' => 'Female - Kore',
-        'tts_language_code' => 'en-US',
     ]);
-});
 
-test('it normalizes generated audio urls before saving them for playback', function () {
     $this->mock(GeminiAudioService::class)
         ->shouldReceive('generateWav')
         ->once()
@@ -184,7 +169,7 @@ test('it normalizes generated audio urls before saving them for playback', funct
         ]);
 
     Livewire::test(AudioGenerator::class)
-        ->set('text', 'Direct text')
+        ->call('usePromptTemplate', $template->id)
         ->call('generate')
         ->assertSet('wavUrl', '/storage/audio/direct.wav')
         ->assertSet('savedGenerations.0.audio_url', '/storage/audio/direct.wav');
@@ -195,12 +180,14 @@ test('it normalizes generated audio urls before saving them for playback', funct
     ]);
 });
 
-test('it loads a previous prompt into the form', function () {
+test('it loads a previous prompt into the generator preview state', function () {
     $generation = AudioGeneration::factory()->create([
         'master_prompt' => 'Use a calm radio host style.',
         'prompt_brief' => 'Announce that the doors open at eight.',
         'text' => 'The doors open at eight.',
         'tts_voice' => 'Puck',
+        'tts_voice_gender' => 'Male',
+        'tts_voice_label' => 'Male - Puck',
     ]);
 
     Livewire::test(AudioGenerator::class)
@@ -210,11 +197,17 @@ test('it loads a previous prompt into the form', function () {
         ->assertSet('selectedVoiceGender', 'Male')
         ->assertSet('selectedVoice', 'Puck')
         ->assertSet('selectedLanguageCode', 'en-US')
-        ->assertSet('voiceGenerators.0.name', 'Puck')
         ->assertSet('audioGenerationId', $generation->id);
 });
 
 test('it saves audio generation errors to the database', function () {
+    $template = PromptTemplate::factory()->create([
+        'prompt_text' => 'Direct text',
+        'tts_voice' => 'Puck',
+        'tts_voice_gender' => 'Male',
+        'tts_voice_label' => 'Male - Puck',
+    ]);
+
     $this->mock(GeminiAudioService::class)
         ->shouldReceive('generateWav')
         ->once()
@@ -222,9 +215,7 @@ test('it saves audio generation errors to the database', function () {
         ->andThrow(new AudioGenerationException('Gemini API key is not configured.'));
 
     Livewire::test(AudioGenerator::class)
-        ->set('text', 'Direct text')
-        ->call('selectVoiceGender', 'Male')
-        ->set('selectedVoice', 'Puck')
+        ->call('usePromptTemplate', $template->id)
         ->call('generate')
         ->assertSet('errorMessage', 'Gemini API key is not configured.')
         ->assertSet('audioGenerationId', 1);

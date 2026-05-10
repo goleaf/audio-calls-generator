@@ -4,12 +4,11 @@ namespace App\Livewire;
 
 use App\Exceptions\AudioGenerationException;
 use App\Models\AudioGeneration;
+use App\Models\PromptTemplate;
 use App\Services\AudioGenerationHistoryService;
-use App\Services\AudioVoicePreferenceService;
 use App\Services\GeminiAudioService;
 use App\Services\GeminiLanguageService;
 use App\Services\GeminiVoiceService;
-use App\Services\MasterPromptService;
 use App\Services\PromptTemplateService;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\Rule;
@@ -21,8 +20,6 @@ use Throwable;
 class AudioGenerator extends Component
 {
     private const VIEW = 'livewire.audio-generator';
-
-    private const SUCCESS_MASTER_PROMPT_SAVED = 'Master prompt has been saved.';
 
     private const SUCCESS_WAV_GENERATED = 'WAV audio has been generated.';
 
@@ -63,46 +60,19 @@ class AudioGenerator extends Component
     /** @var list<array<string, mixed>> */
     public array $savedGenerations = [];
 
-    /** @var list<array{id: int, title: string, language_code: string|null, language_name: string|null, language_readiness: string|null, language_label: string|null}> */
+    /** @var list<array{id: int, title: string, master_prompt: string|null, prompt_text: string, language_code: string|null, language_name: string|null, language_readiness: string|null, language_label: string|null, tts_voice: string|null, tts_voice_gender: string|null, tts_voice_label: string|null}> */
     public array $promptTemplates = [];
 
-    /** @var list<string> */
-    public array $voiceGenders = [];
-
-    /** @var list<array{name: string, gender: string}> */
-    public array $voiceGenerators = [];
-
-    /** @var array<string, list<array{name: string, code: string, readiness: string, label: string}>> */
-    public array $languageGroups = [];
+    /** @var array{title: string, master_prompt: string, prompt_text: string, language_label: string, tts_voice_label: string}|null */
+    public ?array $selectedTemplate = null;
 
     /**
-     * Initialize the form with saved prompt, default language, default voice, and recent history.
+     * Initialize the form with reusable templates and recent generation history.
      */
     public function mount(): void
     {
-        $voiceService = app(GeminiVoiceService::class);
-        $languageService = app(GeminiLanguageService::class);
-
-        $this->masterPrompt = app(MasterPromptService::class)->current();
-        $this->languageGroups = $languageService->groups();
-        $this->selectedLanguageCode = $languageService->default()['code'];
-        $this->voiceGenders = $voiceService->genders();
-        $this->setSelectedVoice(app(AudioVoicePreferenceService::class)->current()['name']);
         $this->loadPromptTemplates();
         $this->loadSavedGenerations();
-    }
-
-    /**
-     * Validate and persist the master prompt used for future audio scripts.
-     */
-    public function saveMasterPrompt(): void
-    {
-        $validated = $this->validate($this->masterPromptRules(), $this->validationMessages());
-        $masterPrompt = app(MasterPromptService::class)->save($validated['masterPrompt']);
-
-        $this->masterPrompt = $masterPrompt->content;
-        $this->errorMessage = null;
-        $this->successMessage = self::SUCCESS_MASTER_PROMPT_SAVED;
     }
 
     /**
@@ -110,26 +80,35 @@ class AudioGenerator extends Component
      */
     public function generate(): void
     {
-        $validated = $this->validate($this->textRules(), $this->validationMessages());
+        $validated = $this->validate($this->templateRules(), $this->validationMessages());
+        $template = app(PromptTemplateService::class)->find((int) $validated['selectedPromptTemplateId']);
+
+        if ($template === null) {
+            $this->successMessage = null;
+            $this->errorMessage = self::ERROR_TEMPLATE_NOT_FOUND;
+
+            return;
+        }
+
+        $this->applyTemplate($template);
 
         $this->resetAudioResults(keepGeneration: true);
         $history = app(AudioGenerationHistoryService::class);
-        $masterPrompt = $this->nullableString($this->masterPrompt);
         $generation = $history->saveDraft(
             $this->audioGenerationId,
-            $masterPrompt,
-            $validated['text'],
-            $validated['selectedVoice'],
-            $validated['selectedLanguageCode'],
+            $this->masterPrompt,
+            $this->text,
+            $this->selectedVoice,
+            $this->selectedLanguageCode,
         );
 
         $this->syncGenerationState($history, $generation);
 
         try {
             $audio = app(GeminiAudioService::class)->generateWav(
-                $validated['text'],
-                $validated['selectedVoice'],
-                $validated['selectedLanguageCode'],
+                $this->text,
+                $this->selectedVoice,
+                $this->selectedLanguageCode,
             );
             $generation = $history->markWavGenerated($generation, $audio);
 
@@ -142,8 +121,8 @@ class AudioGenerator extends Component
         } catch (AudioGenerationException $exception) {
             $generation = $history->markWavFailed(
                 $generation,
-                $validated['selectedVoice'],
-                $validated['selectedLanguageCode'],
+                $this->selectedVoice,
+                $this->selectedLanguageCode,
                 $exception->getMessage(),
             );
 
@@ -156,8 +135,8 @@ class AudioGenerator extends Component
 
             $generation = $history->markWavFailed(
                 $generation,
-                $validated['selectedVoice'],
-                $validated['selectedLanguageCode'],
+                $this->selectedVoice,
+                $this->selectedLanguageCode,
                 self::ERROR_UNEXPECTED_GENERATION,
             );
 
@@ -189,8 +168,10 @@ class AudioGenerator extends Component
 
         $this->masterPrompt = (string) ($generation->master_prompt ?? $generation->prompt_brief);
         $this->text = (string) $generation->text;
-        $this->setSelectedVoice((string) $generation->tts_voice);
-        $this->setSelectedLanguage((string) ($generation->tts_language_code ?: app(GeminiLanguageService::class)->default()['code']));
+        $this->selectedVoice = (string) $generation->tts_voice;
+        $this->selectedVoiceGender = (string) $generation->tts_voice_gender;
+        $this->selectedLanguageCode = (string) ($generation->tts_language_code ?: app(GeminiLanguageService::class)->default()['code']);
+        $this->selectedTemplate = null;
         $this->audioGenerationId = $generation->id;
         $this->wavPath = $generation->audio_path;
         $this->wavUrl = $generation->audio_url;
@@ -207,6 +188,8 @@ class AudioGenerator extends Component
 
         if ($id < 1) {
             $this->selectedPromptTemplateId = '';
+            $this->selectedTemplate = null;
+            $this->resetAudioResults();
 
             return;
         }
@@ -222,68 +205,11 @@ class AudioGenerator extends Component
         }
 
         $this->selectedPromptTemplateId = (string) $template->id;
-        $this->text = $template->prompt_text;
-        $this->setSelectedLanguage((string) ($template->language_code ?: app(GeminiLanguageService::class)->default()['code']));
+        $this->applyTemplate($template);
         $this->wavPath = null;
         $this->wavUrl = null;
         $this->errorMessage = null;
         $this->successMessage = self::SUCCESS_TEMPLATE_LOADED;
-    }
-
-    /**
-     * Persist the selected gender when Livewire updates the bound select field.
-     */
-    public function updatedSelectedVoiceGender(string $gender): void
-    {
-        $this->selectVoiceGender($gender);
-    }
-
-    /**
-     * Persist the selected voice name when Livewire updates the bound select field.
-     */
-    public function updatedSelectedVoice(string $voiceName): void
-    {
-        $this->selectVoice($voiceName);
-    }
-
-    /**
-     * Select a gender, refresh the available voice names, and save the voice preference.
-     */
-    public function selectVoiceGender(string $gender): void
-    {
-        $voiceService = app(GeminiVoiceService::class);
-        $generators = $this->voiceOptionsForGender($voiceService, $gender);
-
-        if ($generators === []) {
-            $this->setSelectedVoice($voiceService->default()['name']);
-
-            return;
-        }
-
-        $this->selectedVoiceGender = $gender;
-        $this->voiceGenerators = $generators;
-        $this->selectedVoice = $generators[0]['name'];
-        $this->resetValidation('selectedVoice');
-        $this->saveCurrentVoicePreference();
-    }
-
-    /**
-     * Select and save a voice preference that belongs to the currently selected gender.
-     */
-    public function selectVoice(string $voiceName): void
-    {
-        $voiceService = app(GeminiVoiceService::class);
-        $voice = $voiceService->find($voiceName);
-
-        if ($voice === null || $voice['gender'] !== $this->selectedVoiceGender) {
-            $this->addError('selectedVoice', $this->validationMessages()['selectedVoice.in']);
-
-            return;
-        }
-
-        $this->selectedVoice = $voice['name'];
-        $this->resetValidation('selectedVoice');
-        $this->saveCurrentVoicePreference();
     }
 
     /**
@@ -312,32 +238,18 @@ class AudioGenerator extends Component
     }
 
     /**
-     * Validation rules for generating audio from the current form state.
+     * Validation rules for generating audio from a saved prompt template.
      *
      * @return array<string, list<mixed>>
      */
-    private function textRules(): array
-    {
-        $voiceService = app(GeminiVoiceService::class);
-        $languageService = app(GeminiLanguageService::class);
-
-        return [
-            'text' => ['required', 'string', 'min:3', 'max:5000'],
-            'selectedVoiceGender' => ['required', 'string', Rule::in($voiceService->genders())],
-            'selectedVoice' => ['required', 'string', Rule::in($voiceService->namesForGender($this->selectedVoiceGender))],
-            'selectedLanguageCode' => ['required', 'string', Rule::in($languageService->codes())],
-        ];
-    }
-
-    /**
-     * Validation rules for saving the single master prompt.
-     *
-     * @return array<string, list<string>>
-     */
-    private function masterPromptRules(): array
+    private function templateRules(): array
     {
         return [
-            'masterPrompt' => ['required', 'string', 'min:3', 'max:2000'],
+            'selectedPromptTemplateId' => [
+                'required',
+                'integer',
+                Rule::exists('prompt_templates', 'id'),
+            ],
         ];
     }
 
@@ -349,18 +261,9 @@ class AudioGenerator extends Component
     private function validationMessages(): array
     {
         return [
-            'masterPrompt.required' => 'Enter a master prompt first.',
-            'masterPrompt.min' => 'The master prompt must contain at least :min characters.',
-            'masterPrompt.max' => 'The master prompt must not be longer than :max characters.',
-            'text.required' => 'Enter text to synthesize.',
-            'text.min' => 'The script must contain at least :min characters.',
-            'text.max' => 'The script must not be longer than :max characters.',
-            'selectedVoiceGender.required' => 'Choose a voice gender.',
-            'selectedVoiceGender.in' => 'Choose an available voice gender.',
-            'selectedVoice.required' => 'Choose a voice generator.',
-            'selectedVoice.in' => 'Choose a generator from the selected gender.',
-            'selectedLanguageCode.required' => 'Choose a language.',
-            'selectedLanguageCode.in' => 'Choose an available language.',
+            'selectedPromptTemplateId.required' => 'Choose a prompt template first.',
+            'selectedPromptTemplateId.integer' => 'Choose an available prompt template.',
+            'selectedPromptTemplateId.exists' => 'Choose an available prompt template.',
         ];
     }
 
@@ -396,61 +299,28 @@ class AudioGenerator extends Component
     }
 
     /**
-     * Normalize empty user input to null before saving optional database fields.
+     * Apply every saved prompt template setting to the audio generation state.
      */
-    private function nullableString(?string $value): ?string
-    {
-        $value = trim((string) $value);
-
-        return $value === '' ? null : $value;
-    }
-
-    /**
-     * Persist the currently selected voice without changing previous prompt history.
-     */
-    private function saveCurrentVoicePreference(): void
-    {
-        app(AudioVoicePreferenceService::class)->save($this->selectedVoice);
-    }
-
-    /**
-     * Set the selected voice and rebuild the dependent voice options list.
-     */
-    private function setSelectedVoice(string $voiceName): void
-    {
-        $voiceService = app(GeminiVoiceService::class);
-        $voice = $voiceService->find($voiceName) ?? $voiceService->default();
-
-        $this->selectedVoiceGender = $voice['gender'];
-        $this->voiceGenerators = $this->voiceOptionsForGender($voiceService, $voice['gender']);
-        $this->selectedVoice = $voice['name'];
-    }
-
-    /**
-     * Set the selected language to a supported Gemini-TTS language code.
-     */
-    private function setSelectedLanguage(string $languageCode): void
+    private function applyTemplate(PromptTemplate $template): void
     {
         $languageService = app(GeminiLanguageService::class);
-        $language = $languageService->find($languageCode) ?? $languageService->default();
+        $voiceService = app(GeminiVoiceService::class);
+        $language = $languageService->find((string) $template->language_code) ?? $languageService->default();
+        $voice = $voiceService->find((string) $template->tts_voice) ?? $voiceService->default();
 
+        $this->masterPrompt = (string) $template->master_prompt;
+        $this->text = $template->prompt_text;
         $this->selectedLanguageCode = $language['code'];
-        $this->resetValidation('selectedLanguageCode');
-    }
-
-    /**
-     * Build the slim voice option shape required by the Blade select.
-     *
-     * @return list<array{name: string, gender: string}>
-     */
-    private function voiceOptionsForGender(GeminiVoiceService $voiceService, string $gender): array
-    {
-        return collect($voiceService->generatorsForGender($gender))
-            ->map(fn (array $generator): array => [
-                'name' => $generator['name'],
-                'gender' => $generator['gender'],
-            ])
-            ->all();
+        $this->selectedVoiceGender = $voice['gender'];
+        $this->selectedVoice = $voice['name'];
+        $this->selectedTemplate = [
+            'title' => $template->title,
+            'master_prompt' => (string) $template->master_prompt,
+            'prompt_text' => $template->prompt_text,
+            'language_label' => $language['label'],
+            'tts_voice_label' => $voice['label'],
+        ];
+        $this->resetValidation('selectedPromptTemplateId');
     }
 
     /**
